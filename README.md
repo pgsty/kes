@@ -107,6 +107,8 @@ PGSTY KES preserves the KES HTTP API, configuration fields, key storage format, 
 
 The release-gating integration is **SILO + PGSTY KES + OpenBao KV v2**. The [CI matrix](.github/workflows/kms-compat.yml) lists the tested SILO releases. Its [integration test](testing/kms-compat.sh) checks that objects encrypted through the last upstream KES release remain readable after upgrading KES, then verifies new encrypted writes. Compatibility with unmodified upstream MinIO is best effort. Other inherited key-store backends are listed in [server-config.yaml](server-config.yaml); the SILO/OpenBao test does not certify every backend.
 
+The AWS Secrets Manager backend uses AWS SDK for Go v2 and retains the existing YAML fields and stored key format. Explicit credentials take precedence; empty credentials use the SDK's environment, shared credentials file, or IAM role providers. As before, KES does not load `~/.aws/config`, and the configured endpoint takes precedence over SDK endpoint environment variables. Additional CI exercises SDK v1/v2 upgrades, rollback and SILO encrypted reads against the Moto Secrets Manager emulator, restarting SILO to discard cached keys. These local checks do not certify live AWS IAM policies or service behavior.
+
 <details>
 <summary>CLI environment variable precedence</summary>
 

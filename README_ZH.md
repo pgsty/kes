@@ -111,6 +111,8 @@ PGSTY KES 保留 KES HTTP API、配置字段、密钥存储格式、监控指标
 
 发布验收组合为 **SILO + PGSTY KES + OpenBao KV v2**。[CI 矩阵](.github/workflows/kms-compat.yml) 列出参与测试的 SILO 版本；[集成测试](testing/kms-compat.sh) 会先通过上游最后一个 KES 发行版写入加密对象，再升级 KES，验证旧对象仍可读取并检查新的加密写入。对未修改的上游 MinIO 尽最大努力保持兼容。其他继承的密钥存储后端见 [server-config.yaml](server-config.yaml)；SILO/OpenBao 测试不代表所有后端均已通过认证。
 
+AWS Secrets Manager 后端使用 AWS SDK for Go v2，保留现有 YAML 字段和密钥存储格式。显式配置的凭据优先；留空时通过 SDK 从环境变量、共享凭据文件或 IAM Role 获取。与原实现一致，KES 不加载 `~/.aws/config`，SDK 的端点环境变量也不会覆盖 KES 配置。额外的 CI 使用 Moto 模拟 Secrets Manager，验证 SDK v1/v2 升级、回滚和 SILO 加密读取，每次切换都会重启 SILO 以清除密钥缓存。这些本地检查不代表已经验证真实 AWS 的 IAM 策略和服务行为。
+
 <details>
 <summary>CLI 环境变量优先级</summary>
 

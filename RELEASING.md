@@ -14,12 +14,28 @@ All four workflows run on pull requests and pushes to `master`:
 - **VulnCheck**: reachable Go vulnerabilities; also runs weekly.
 - **KMS Compatibility**: OpenBao KV v2 and released SILO servers, including
   reading objects written through the last upstream KES release after an upgrade.
+  A separate Moto Secrets Manager job checks AWS SDK v1/v2 upgrades and rollback.
+  Both fixtures restart SILO between KES versions so cached keys cannot hide
+  backend failures. Moto is local protocol coverage, not live AWS certification.
 - **Test Release Pipeline**: six cross-platform archives, six Linux packages,
   metadata and binary digest checks, provenance stamps, release guard tests,
   and a container build/run without pushing.
 
 The release gate requires successful push runs for the exact tip of `master`.
 A PR merge-ref run or a manual dispatch does not satisfy that gate.
+
+To run the AWS fixture locally with Docker (Linux host networking or macOS
+forwarded ports):
+
+```sh
+KEYSTORE=aws KES_BASELINE=/absolute/path/to/kes-with-sdk-v1 ./testing/kms-compat.sh
+```
+
+The fixture creates a disposable Moto container with test credentials and never
+uses a real AWS account. It checks old and newly created encryption keys across
+upgrade, rollback and restart, then runs `TestAWS` against that same store and
+verifies that test cleanup preserved both keys. The CI pins the SDK v1 baseline
+commit; `KES_BASELINE` must point to a binary built before the SDK migration.
 
 ## Local build rehearsal
 
