@@ -1,0 +1,70 @@
+version: 2
+
+project_name: kes
+
+env:
+  - CGO_ENABLED=0
+  - GO111MODULE=on
+
+before:
+  hooks:
+    - go mod download
+    - go mod verify
+
+builds:
+  - id: kes
+    main: ./cmd/kes
+    binary: kes
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goamd64:
+      - v1
+    flags:
+      - -buildvcs=true
+      - -trimpath
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+
+archives:
+  - id: kes
+    ids:
+      - kes
+    name_template: "kes_{{ .Env.PKG_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - NOTICE
+      - CREDITS
+      - README.md
+
+checksum:
+  name_template: "kes_{{ .Env.PKG_VERSION }}_checksums.txt"
+  algorithm: sha256
+
+release:
+  github:
+    owner: pgsty
+    name: mc
+  draft: true
+  prerelease: false
+  replace_existing_draft: true
+  replace_existing_artifacts: false
+  mode: replace
+  # Draft replacement matches the release name; keep it identical to the tag.
+  name_template: "{{ .Tag }}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "Merge pull request"
+      - "Merge branch"
+
+announce:
+  skip: true

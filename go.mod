@@ -6,7 +6,6 @@ toolchain go1.27.2
 
 require (
 	aead.dev/mem v0.2.0
-	aead.dev/minisign v0.3.0
 	cloud.google.com/go/secretmanager v1.22.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.3
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.1
@@ -16,7 +15,6 @@ require (
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/minio/kms-go/kes v0.3.1
 	github.com/minio/kms-go/kms v0.5.0
-	github.com/minio/selfupdate v0.6.0
 	github.com/muesli/termenv v0.16.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.0

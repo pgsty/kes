@@ -8,7 +8,7 @@
 # store; the objects must still decrypt. This is the upgrade path from the
 # last upstream release.
 #
-#   VAULT_IMAGE   key store image (default openbao/openbao:2.7)
+#   VAULT_IMAGE   key store image (default openbao/openbao:2.7.1)
 #   SILO_IMAGE    default pgsty/silo:RELEASE.2026-09-16T00-00-00Z
 #   KES           KES binary under test (default: built from this tree)
 #   KES_BASELINE  optional KES binary to write with first
@@ -16,8 +16,9 @@
 # Requires docker, curl, jq and go. Uses the host network on ports 18200,
 # 17373 and 19000.
 set -euo pipefail
+umask 077
 
-VAULT_IMAGE=${VAULT_IMAGE:-openbao/openbao:2.7}
+VAULT_IMAGE=${VAULT_IMAGE:-openbao/openbao:2.7.1}
 SILO_IMAGE=${SILO_IMAGE:-pgsty/silo:RELEASE.2026-09-16T00-00-00Z}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=$(mktemp -d)
@@ -28,6 +29,11 @@ NAME=kms-compat-$$
 KES_PID=
 
 cleanup() {
+	local status=$?
+	if [ "$status" -ne 0 ]; then
+		for log in "$WORK"/kes-*.log; do [ ! -f "$log" ] || tail -80 "$log" >&2; done
+		docker logs "$NAME-silo" >&2 2>/dev/null || true
+	fi
 	if [ -n "$KES_PID" ]; then kill "$KES_PID" 2>/dev/null || true; fi
 	docker rm -f "$NAME-vault" "$NAME-silo" >/dev/null 2>&1 || true
 	if [ "${KEEP:-}" = 1 ]; then echo "kept $WORK"; else rm -r "$WORK"; fi
@@ -98,6 +104,14 @@ stop_kes() {
 	KES_PID=
 }
 
+if [ -n "${KES_BASELINE:-}" ]; then
+	"$KES_BASELINE" --version
+	start_kes "$KES_BASELINE" baseline
+else
+	start_kes "$KES" test
+fi
+
+
 mkdir silo-data
 docker run -d --name "$NAME-silo" --network host --user "$(id -u):$(id -g)" \
 	-v "$WORK:$WORK" \
@@ -122,12 +136,6 @@ check() {
 	echo "ok: $1 is SSE-KMS and decrypts"
 }
 
-if [ -n "${KES_BASELINE:-}" ]; then
-	"$KES_BASELINE" --version
-	start_kes "$KES_BASELINE" baseline
-else
-	start_kes "$KES" test
-fi
 
 wait_for mc alias set local http://127.0.0.1:19000 compat compat-password
 wait_for mc admin kms key status local "$KEY"

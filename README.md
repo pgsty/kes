@@ -1,17 +1,11 @@
-# ⛔️ DEPRECATED
+# PGSTY KES
 
-**This repository is no longer maintained.**. No new features, releases or bug fixes will be added here.
+This is the PGSTY fork of MinIO KES, used as an optional key encryption
+service for [SILO](https://github.com/pgsty/silo). The upstream open-source
+repository is deprecated; PGSTY build and release work is maintained here.
 
-**All previous open source releases of KES will continue to be available.**
-
-**All paying customers have access to Enterprise version of KES which is actively maintained at 
-https://github.com/miniohq/kes - please open a [SUBNET](https://subnet.min.io) issue to discuss further.**
-
-**MinIO alternatively provides [MinKMS AiStor Key Manager](https://min.io/docs/aistor-custom/key-manager/)**
-
-**MinKMS is a fully featured key manager optimized to be used with [MinIO AiStor](https://min.io/download?view=aistor-custom).**
-
-> NOTE: Migration from KES Open Source and KES Enterprise to MinKMS is supported as well.
+KES remains a separate `kes` executable. Its HTTP API, configuration and
+Vault-compatible keystore integration are preserved.
 
 <p align="center">
   <img src='.github/logo.svg?sanitize=true' width='55%'>
@@ -38,60 +32,26 @@ stateless instances that can be scaled up and down automatically.
 
 ## Install
 
-The KES server and CLI is available as a single binary, container image or can be build from source.
-
-<details open="true"><summary><b><a name="homebrew">Homebrew</a></b></summary>
-
-```sh
-brew install minio/stable/kes
-```
-</details>
-
-<details><summary><b><a name="docker">Docker</a></b></summary>
-
-Pull the latest release via:
-```
-docker pull minio/kes
-```
-</details>
-
-<details><summary><b><a name="binary-releases">Binary Releases</a></b></summary>
-
-| OS      | ARCH    | Binary                                                                                       |
-|:-------:|:-------:|:--------------------------------------------------------------------------------------------:|
-| linux   | amd64   | [linux-amd64](https://github.com/minio/kes/releases/latest/download/kes-linux-amd64)         |
-| linux   | arm64   | [linux-arm64](https://github.com/minio/kes/releases/latest/download/kes-linux-arm64)         |
-| darwin  | arm64   | [darwin-arm64](https://github.com/minio/kes/releases/latest/download/kes-darwin-arm64)       |
-| windows | amd64   | [windows-amd64](https://github.com/minio/kes/releases/latest/download/kes-windows-amd64.exe) |
-
-Download the binary via `curl` but replace `<OS>` and `<ARCH>` with your operating system and CPU architecture.
-```
-curl -sSL --tlsv1.2 'https://github.com/minio/kes/releases/latest/download/kes-<OS>-<ARCH>' -o ./kes
-```
-```
-chmod +x ./kes
-```
-
-You can also verify the binary with [minisign](https://jedisct1.github.io/minisign/) by downloading the corresponding [`.minisig`](https://github.com/minio/kes/releases/latest) signature file. 
-Run:
-```
-curl -sSL --tlsv1.2 'https://github.com/minio/kes/releases/latest/download/kes-<OS>-<ARCH>.minisig' -o ./kes.minisig
-```
-```
-minisign -Vm ./kes -P RWTx5Zr1tiHQLwG9keckT0c45M3AGeHD6IvimQHpyRywVWGbP1aVSGav
-```
-</details>   
-   
-<details><summary><b><a name="build-from-source">Build from source</a></b></summary>
-
-Download and install the binary via your Go toolchain:
+PGSTY release artifacts are published at
+[pgsty/kes releases](https://github.com/pgsty/kes/releases). Until the first
+PGSTY release is published, build this checkout:
 
 ```sh
-go install github.com/minio/kes/cmd/kes@latest
+git clone https://github.com/pgsty/kes.git
+cd kes
+go build -trimpath -o kes ./cmd/kes
+./kes --version
 ```
 
-</details>
-   
+The release pipeline builds Linux, macOS and Windows archives for AMD64 and
+ARM64, plus Linux RPM, DEB and APK packages. Container publication targets
+`docker.io/pgsty/kes` and is a separate, manually invoked step. An archive or
+workflow configuration is not evidence that a release has been published.
+
+`kes update` is disabled in this fork. Upgrade through packages, images or
+verified PGSTY release artifacts; it must never download an upstream binary.
+See [RELEASING.md](RELEASING.md) for build, verification and publication steps.
+
 ## Quick Start
    
 We run a public KES instance at `https://play.min.io:7373` as playground.

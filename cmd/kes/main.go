@@ -43,7 +43,7 @@ Commands:
     metric                   Print server metrics.
 
     migrate                  Migrate KMS data.
-    update                   Update KES binary.
+    update                   Show supported upgrade methods.
 
 Options:
     -v, --version            Print version information.

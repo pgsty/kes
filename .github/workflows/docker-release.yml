@@ -1,0 +1,200 @@
+name: Publish Docker Image
+
+# Repackages the Linux archives of an already published Release into
+# pgsty/kes images. Everything it consumes is re-verified here against the
+# Sigstore provenance the Release workflow recorded: same workflow identity,
+# same tag, same commit, same filename, same bytes, GitHub-hosted runner.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Published RELEASE.* tag to package as pgsty/kes"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  # gh attestation verify reads the Sigstore provenance the Release workflow
+  # recorded for the archives this job repackages.
+  attestations: read
+
+concurrency:
+  group: docker-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate published release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="${INPUT_TAG}"
+          if [[ ! "${TAG}" =~ ^RELEASE\.[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}Z$ ]]; then
+            echo "Invalid release tag: ${TAG}" >&2
+            exit 1
+          fi
+          VERSION_HYPHEN="${TAG#RELEASE.}"
+          PKG_VERSION="$(echo "${VERSION_HYPHEN}" | sed -E 's/^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2})-([0-9]{2})-([0-9]{2})Z$/\1\2\3\4\5\6.0.0/')"
+          if [ "${PKG_VERSION}" = "${VERSION_HYPHEN}" ]; then
+            echo "Invalid release tag: ${TAG}"
+            exit 1
+          fi
+
+          IS_DRAFT="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)"
+          IS_PRERELEASE="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)"
+          PUBLISHED_AT="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json publishedAt --jq .publishedAt)"
+          LATEST_TAG="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+
+          if [ "${IS_DRAFT}" != false ] || [ "${IS_PRERELEASE}" != false ] || [ -z "${PUBLISHED_AT}" ]; then
+            echo "${TAG} must be a published, non-prerelease GitHub Release"
+            exit 1
+          fi
+          if [ "${TAG}" != "${LATEST_TAG}" ]; then
+            echo "Refusing to replace Docker latest with non-latest release ${TAG} (latest is ${LATEST_TAG})"
+            exit 1
+          fi
+
+          {
+            echo "RELEASE_TAG=${TAG}"
+            echo "PKG_VERSION=${PKG_VERSION}"
+            echo "PUBLISHED_AT=${PUBLISHED_AT}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Checkout release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Verify the release tag is annotated and signed
+        env:
+          RELEASE_SIGNING_FINGERPRINT: ${{ vars.RELEASE_SIGNING_FINGERPRINT }}
+          RELEASE_SIGNING_KEY_URL: ${{ vars.RELEASE_SIGNING_KEY_URL }}
+        run: |
+          set -euo pipefail
+          buildscripts/verify-release-tag.sh "${RELEASE_TAG}"
+          echo "RELEASE_REVISION=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+
+      - name: Download and verify attested release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          assets_dir="docker-release/assets"
+          mkdir -p "${assets_dir}"
+
+          amd64_archive="kes_${PKG_VERSION}_linux_amd64.tar.gz"
+          arm64_archive="kes_${PKG_VERSION}_linux_arm64.tar.gz"
+          checksums="kes_${PKG_VERSION}_checksums.txt"
+          gh release download "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" \
+            --dir "${assets_dir}" \
+            --pattern "${amd64_archive}" \
+            --pattern "${arm64_archive}" \
+            --pattern "${checksums}"
+
+          # The checksums file lives in the same Release as the archives, so
+          # agreeing with it proves nothing on its own; it is verified as an
+          # attested subject like the archives. The attestation binds each
+          # file to the Release workflow run for this tag and commit, and to
+          # its own filename and digest, so a valid arm64 archive renamed as
+          # amd64 is refused.
+          buildscripts/verify-release-attestation.sh "${RELEASE_TAG}" "${RELEASE_REVISION}" \
+            "${assets_dir}/${checksums}" "${assets_dir}/${amd64_archive}" "${assets_dir}/${arm64_archive}"
+
+          cd "${assets_dir}"
+          grep -F "  ${amd64_archive}" "${checksums}" | sha256sum --check
+          grep -F "  ${arm64_archive}" "${checksums}" | sha256sum --check
+          cd "${GITHUB_WORKSPACE}"
+
+          for arch in amd64 arm64; do
+            context="docker-release/${arch}"
+            archive="${assets_dir}/kes_${PKG_VERSION}_linux_${arch}.tar.gz"
+            mkdir -p "${context}"
+            tar -xzf "${archive}" -C "${context}" kes
+            # The archive name says which architecture; the binary must agree.
+            buildscripts/verify-elf-arch.sh "${context}/kes" "${arch}"
+            cp Dockerfile LICENSE NOTICE CREDITS "${context}/"
+          done
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push amd64 image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: docker-release/amd64
+          file: docker-release/amd64/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            pgsty/kes:${{ env.RELEASE_TAG }}-amd64
+          labels: |
+            org.opencontainers.image.version=${{ env.RELEASE_TAG }}
+            org.opencontainers.image.created=${{ env.PUBLISHED_AT }}
+            org.opencontainers.image.revision=${{ env.RELEASE_REVISION }}
+
+      - name: Build and push arm64 image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: docker-release/arm64
+          file: docker-release/arm64/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            pgsty/kes:${{ env.RELEASE_TAG }}-arm64
+          labels: |
+            org.opencontainers.image.version=${{ env.RELEASE_TAG }}
+            org.opencontainers.image.created=${{ env.PUBLISHED_AT }}
+            org.opencontainers.image.revision=${{ env.RELEASE_REVISION }}
+
+      # Each per-architecture image is pulled back, run, and its labels read,
+      # before anything is promoted to the version tag or to latest.
+      - name: Run each architecture image before promotion
+        run: |
+          set -euo pipefail
+          for arch in amd64 arm64; do
+            image="pgsty/kes:${RELEASE_TAG}-${arch}"
+            docker pull --platform "linux/${arch}" "${image}"
+            version_output="$(docker run --rm --platform "linux/${arch}" "${image}" --version)"
+            echo "${version_output}"
+            grep -qF "${RELEASE_TAG}" <<< "${version_output}"
+            test "$(docker image inspect "${image}" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "${RELEASE_TAG}"
+            test "$(docker image inspect "${image}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${RELEASE_REVISION}"
+            test "$(docker image inspect "${image}" --format '{{ .Architecture }}')" = "${arch}"
+          done
+
+      - name: Publish multi-architecture manifests
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "pgsty/kes:${RELEASE_TAG}" \
+            "pgsty/kes:${RELEASE_TAG}-amd64" \
+            "pgsty/kes:${RELEASE_TAG}-arm64"
+          docker buildx imagetools create \
+            --tag "pgsty/kes:latest-amd64" \
+            "pgsty/kes:${RELEASE_TAG}-amd64"
+          docker buildx imagetools create \
+            --tag "pgsty/kes:latest-arm64" \
+            "pgsty/kes:${RELEASE_TAG}-arm64"
+          docker buildx imagetools create \
+            --tag "pgsty/kes:latest" \
+            "pgsty/kes:${RELEASE_TAG}-amd64" \
+            "pgsty/kes:${RELEASE_TAG}-arm64"
+          docker buildx imagetools inspect "pgsty/kes:${RELEASE_TAG}"
+          docker buildx imagetools inspect "pgsty/kes:latest"

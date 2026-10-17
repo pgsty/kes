@@ -1,32 +1,188 @@
 name: Release
 
+# Artifacts are produced only from a pushed RELEASE.* tag. There is no manual
+# trigger and no free-text ref: the provenance attestation names the workflow
+# ref that ran, and a dispatch could run this file from one ref while
+# building another. Retry a failed run with GitHub's native job rerun; the
+# Draft it left behind is replaced from scratch (check-release-state.sh).
+
 on:
-  pull_request:
-    branches:
-    - master
   push:
-    branches:
-    - master
+    tags:
+      - "RELEASE.*"
+
+permissions:
+  contents: write
+  # Sigstore build provenance for the artifacts this run produces and does not
+  # later modify. See the attestation step for why RPMs are excluded.
+  id-token: write
+  attestations: write
+  # check-release-commit.sh reads workflow runs through the Actions API. Every
+  # permission not listed here is "none", so omitting this fails a legitimate
+  # release with "Resource not accessible by integration".
+  actions: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  goreleaser:
-    name: Build
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Unshallow
-        run: git fetch --prune --unshallow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v3
+          cache: true
+
+      - name: Verify clean checkout
+        run: |
+          set -euo pipefail
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Refusing to release from a dirty working tree:" >&2
+            git status --porcelain >&2
+            exit 1
+          fi
+
+      - name: Compute release variables
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "${TAG}" =~ ^RELEASE\.[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}Z$ ]]; then
+            echo "Invalid release tag: ${TAG}" >&2
+            exit 1
+          fi
+          VERSION_HYPHEN="${TAG#RELEASE.}"
+          PKG_VERSION="$(echo "${VERSION_HYPHEN}" | sed -E 's/^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2})-([0-9]{2})-([0-9]{2})Z$/\1\2\3\4\5\6.0.0/')"
+          if [ "${PKG_VERSION}" = "${VERSION_HYPHEN}" ]; then
+            echo "Invalid release tag format: ${TAG}"
+            exit 1
+          fi
+          if ! TAG_COMMIT="$(git rev-parse "${TAG}^{commit}" 2>/dev/null)"; then
+            echo "Release tag ${TAG} does not resolve to a commit" >&2
+            exit 1
+          fi
+          HEAD_COMMIT="$(git rev-parse HEAD)"
+          if [ "${TAG_COMMIT}" != "${HEAD_COMMIT}" ]; then
+            echo "Release tag ${TAG} resolves to ${TAG_COMMIT}, checkout is ${HEAD_COMMIT}" >&2
+            exit 1
+          fi
+          if [ "${GITHUB_SHA}" != "${HEAD_COMMIT}" ]; then
+            echo "Event SHA ${GITHUB_SHA} does not match checkout ${HEAD_COMMIT}" >&2
+            exit 1
+          fi
+          VERSION_COLON="$(echo "${VERSION_HYPHEN}" | sed -E 's/T([0-9]{2})-([0-9]{2})-([0-9]{2})Z$/T\1:\2:\3Z/')"
+          LDFLAGS="$(go run buildscripts/gen-ldflags.go "${VERSION_COLON}")"
+
+          {
+            echo "RELEASE_TAG=${TAG}"
+            echo "RELEASE_COMMIT=${HEAD_COMMIT}"
+            echo "PKG_VERSION=${PKG_VERSION}"
+            echo "LDFLAGS=${LDFLAGS}"
+          } >> "${GITHUB_ENV}"
+
+          echo "Release tag: ${TAG}"
+          echo "Release commit: ${HEAD_COMMIT}"
+          echo "Package version: ${PKG_VERSION}"
+          echo "LDFLAGS: ${LDFLAGS}"
+
+      # The expected fingerprint and key location are repository variables,
+      # not files in the tree the tag points at, so the commit being released
+      # cannot vouch for itself.
+      - name: Verify the release tag is annotated and signed
+        env:
+          RELEASE_SIGNING_FINGERPRINT: ${{ vars.RELEASE_SIGNING_FINGERPRINT }}
+          RELEASE_SIGNING_KEY_URL: ${{ vars.RELEASE_SIGNING_KEY_URL }}
+        run: |
+          set -euo pipefail
+          buildscripts/verify-release-tag.sh "${RELEASE_TAG}"
+
+      - name: Check release commit is the tip of master with green CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          buildscripts/check-release-commit.sh "${RELEASE_COMMIT}"
+
+      - name: Check existing release state
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          buildscripts/check-release-state.sh "${RELEASE_TAG}"
+
+      - name: Build Draft release with GoReleaser
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
-          version: latest
-          args: release --skip=publish,sign,before --clean --snapshot
+          version: v2.18.1
+          args: release --clean --skip=validate --config .github/goreleaser.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ env.RELEASE_TAG }}
+          LDFLAGS: ${{ env.LDFLAGS }}
+          PKG_VERSION: ${{ env.PKG_VERSION }}
+
+      - name: Verify binary provenance stamps
+        run: |
+          set -euo pipefail
+          buildscripts/verify-build-provenance.sh
+
+      - name: Install nFPM
+        run: |
+          set -euo pipefail
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
+          echo "$(go env GOPATH)/bin" >> "${GITHUB_PATH}"
+
+      - name: Build nFPM packages
+        run: |
+          set -euo pipefail
+          buildscripts/package-release.sh
+
+      - name: Confirm Draft release state
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUIRE_DRAFT: "true"
+        run: |
+          set -euo pipefail
+          buildscripts/check-release-state.sh "${RELEASE_TAG}"
+
+      - name: Upload nFPM packages to Draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find dist/packages -maxdepth 1 -type f \
+            \( -name '*.rpm' -o -name '*.deb' -o -name '*.apk' -o -name '*.sha256sum' \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No package artifacts to upload."
+            exit 1
+          fi
+          gh release upload "${RELEASE_TAG}" "${files[@]}"
+
+      # RPMs are deliberately absent: buildscripts/sign-release-rpms.sh runs
+      # afterwards on a maintainer machine, rewrites their bytes with rpmsign
+      # and replaces the uploaded assets while the Release is still a Draft.
+      # An attestation made here would name a digest that no published RPM
+      # has, so `gh attestation verify` on the shipped file would fail. RPM
+      # integrity is covered by its detached GPG signature instead.
+      - name: Attest build provenance for release artifacts
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/kes_*.tar.gz
+            dist/kes_*_checksums.txt
+            dist/packages/*.deb
+            dist/packages/*.apk
+
+      - name: Upload dist artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/

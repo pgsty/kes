@@ -12,6 +12,10 @@ import (
 	"sync"
 )
 
+// releaseVersion is set by the PGSTY release build. Development builds retain
+// the VCS timestamp supplied by the Go toolchain.
+var releaseVersion string
+
 // BinaryInfo contains build information about a Go binary.
 type BinaryInfo struct {
 	Version  string // The version of this binary
@@ -55,6 +59,9 @@ var readBinaryInfo = sync.OnceValues[BinaryInfo, error](func() (BinaryInfo, erro
 		case CompilerKey:
 			binaryInfo.Compiler = setting.Value
 		}
+	}
+	if releaseVersion != "" {
+		binaryInfo.Version = releaseVersion
 	}
 	return binaryInfo, nil
 })

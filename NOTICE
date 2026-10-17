@@ -1,0 +1,7 @@
+PGSTY KES is a community-maintained fork of MinIO KES.
+
+Original project: https://github.com/minio/kes
+Maintained source: https://github.com/pgsty/kes
+
+Original copyright notices and the AGPL license are retained. Third-party
+license notices are collected in CREDITS. See LICENSE for license terms.

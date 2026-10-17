@@ -1,0 +1,278 @@
+name: Test Release Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+# Unfiltered on purpose: this workflow is required evidence for a release
+# commit (check-release-commit.sh) and a required check on master, and a check
+# that only sometimes runs would leave pull requests pending forever.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Compute test variables
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="RELEASE.2026-02-14T12-00-00Z"
+          VERSION_COLON="2026-02-14T12:00:00Z"
+          PKG_VERSION="20260214120000.0.0"
+          LDFLAGS="$(go run buildscripts/gen-ldflags.go "${VERSION_COLON}")"
+          {
+            echo "RELEASE_TAG=${RELEASE_TAG}"
+            echo "PKG_VERSION=${PKG_VERSION}"
+            echo "LDFLAGS=${LDFLAGS}"
+          } >> "${GITHUB_ENV}"
+          echo "PKG_VERSION: ${PKG_VERSION}"
+          echo "LDFLAGS: ${LDFLAGS}"
+
+      - name: GoReleaser config check
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: v2.18.1
+          args: check --config .github/goreleaser.yml
+
+      - name: Build snapshot artifacts
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: v2.18.1
+          args: release --snapshot --clean --skip=publish --config .github/goreleaser.yml
+        env:
+          LDFLAGS: ${{ env.LDFLAGS }}
+          PKG_VERSION: ${{ env.PKG_VERSION }}
+
+      - name: Verify binary provenance stamps
+        run: |
+          set -euo pipefail
+          buildscripts/verify-build-provenance.sh
+
+      - name: Verify release version and upgrade instructions
+        run: |
+          set -euo pipefail
+          binary="$(find dist -maxdepth 2 -type f -path 'dist/kes_linux_amd64*/kes')"
+          "${binary}" --version | grep -F "${RELEASE_TAG}"
+          "${binary}" update --help | grep -F 'PGSTY KES does not self-update'
+          if "${binary}" update > update-output.txt 2>&1; then
+            echo 'kes update must reject in-place self-update' >&2
+            exit 1
+          fi
+          grep -F 'https://github.com/pgsty/kes/releases' update-output.txt
+          rm update-output.txt
+
+      - name: Verify archive documentation
+        run: |
+          set -euo pipefail
+          count=0
+          for archive in dist/kes_*.tar.gz; do
+            count=$((count + 1))
+            listing="$(tar -tzf "${archive}")"
+            for member in LICENSE NOTICE CREDITS README.md; do
+              grep -Fx "${member}" <<< "${listing}"
+            done
+          done
+          test "${count}" -eq 6
+
+      - name: Install package validation tools
+        run: |
+          set -euo pipefail
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
+          echo "$(go env GOPATH)/bin" >> "${GITHUB_PATH}"
+          sudo apt-get update
+          sudo apt-get install --yes rpm binutils
+
+      - name: Package snapshot binaries with nFPM
+        run: |
+          set -euo pipefail
+          buildscripts/package-release.sh
+
+      - name: Validate package names, checksums, metadata, and payload
+        run: |
+          set -euo pipefail
+          cd dist/packages
+
+          expected=(
+            "kes-${PKG_VERSION}-1.aarch64.rpm"
+            "kes-${PKG_VERSION}-1.x86_64.rpm"
+            "kes_${PKG_VERSION}_aarch64.apk"
+            "kes_${PKG_VERSION}_amd64.deb"
+            "kes_${PKG_VERSION}_arm64.deb"
+            "kes_${PKG_VERSION}_x86_64.apk"
+          )
+
+          for package in "${expected[@]}"; do
+            test -s "${package}"
+            test -s "${package}.sha256sum"
+            sha256sum --check "${package}.sha256sum"
+          done
+
+          test "$(find . -maxdepth 1 -type f \( -name '*.rpm' -o -name '*.deb' -o -name '*.apk' \) | wc -l)" -eq 6
+
+          # sign-release-rpms.sh refuses to sign an RPM whose metadata does not
+          # match these values, and it runs on a maintainer laptop *after* the
+          # release workflow has already built and uploaded. Take its
+          # expectations as the single source of truth so nfpm.yml and the
+          # signing script cannot drift apart without failing here first.
+          eval "$(grep -E '^expected_(vendor|packager|url|summary|description|license|group)=' \
+            ../../buildscripts/sign-release-rpms.sh)"
+          for value in "${expected_vendor}" "${expected_packager}" "${expected_url}" \
+                       "${expected_summary}" "${expected_description}" \
+                       "${expected_license}" "${expected_group}"; do
+            test -n "${value}"
+          done
+
+          rpm_file="kes-${PKG_VERSION}-1.x86_64.rpm"
+          test "$(rpm -qp --queryformat '%{VENDOR}' "${rpm_file}")" = "${expected_vendor}"
+          test "$(rpm -qp --queryformat '%{PACKAGER}' "${rpm_file}")" = "${expected_packager}"
+          test "$(rpm -qp --queryformat '%{URL}' "${rpm_file}")" = "${expected_url}"
+          test "$(rpm -qp --queryformat '%{SUMMARY}' "${rpm_file}")" = "${expected_summary}"
+          test "$(rpm -qp --queryformat '%{DESCRIPTION}' "${rpm_file}")" = "${expected_description}"
+          test "$(rpm -qp --queryformat '%{LICENSE}' "${rpm_file}")" = "${expected_license}"
+          test "$(rpm -qp --queryformat '%{GROUP}' "${rpm_file}")" = "${expected_group}"
+          rpm -qpl "${rpm_file}" | grep -Fx '/usr/local/bin/kes'
+
+          deb_file="kes_${PKG_VERSION}_amd64.deb"
+          test "$(dpkg-deb --field "${deb_file}" Maintainer)" = "${expected_packager}"
+          test "$(dpkg-deb --field "${deb_file}" Version)" = "${PKG_VERSION}"
+          test "$(dpkg-deb --field "${deb_file}" License)" = "${expected_license}"
+          test "$(dpkg-deb --field "${deb_file}" Section)" = "utils"
+          test "$(dpkg-deb --field "${deb_file}" Homepage)" = "${expected_url}"
+          test "$(dpkg-deb --field "${deb_file}" Description)" = "${expected_description}"
+          dpkg-deb --contents "${deb_file}" | grep -E 'usr/local/bin/kes$'
+
+          apk_info="$(tar -xOzf "kes_${PKG_VERSION}_x86_64.apk" .PKGINFO)"
+          grep -Fx "pkgver = ${PKG_VERSION}" <<< "${apk_info}"
+          grep -Fx "url = ${expected_url}" <<< "${apk_info}"
+          grep -Fx "maintainer = ${expected_packager}" <<< "${apk_info}"
+          grep -Fx "license = ${expected_license}" <<< "${apk_info}"
+          grep -Fx "pkgdesc = ${expected_description}" <<< "${apk_info}"
+          tar -tzf "kes_${PKG_VERSION}_x86_64.apk" | grep -Fx 'usr/local/bin/kes'
+
+          for arch in amd64 arm64; do
+            if [ "${arch}" = amd64 ]; then
+              rpm_arch=x86_64
+              deb_arch=amd64
+              apk_arch=x86_64
+            else
+              rpm_arch=aarch64
+              deb_arch=arm64
+              apk_arch=aarch64
+            fi
+
+            rpm_package="kes-${PKG_VERSION}-1.${rpm_arch}.rpm"
+            deb_package="kes_${PKG_VERSION}_${deb_arch}.deb"
+            apk_package="kes_${PKG_VERSION}_${apk_arch}.apk"
+
+            rpm -qpl "${rpm_package}" |
+              ../../buildscripts/verify-rpm-payload.sh "${rpm_package}"
+            dpkg-deb --contents "${deb_package}" | grep -E 'usr/share/licenses/kes/LICENSE$'
+            dpkg-deb --contents "${deb_package}" | grep -E 'usr/share/doc/kes/NOTICE$'
+            dpkg-deb --contents "${deb_package}" | grep -E 'usr/share/doc/kes/CREDITS$'
+            tar -tzf "${apk_package}" | grep -Fx 'usr/share/licenses/kes/LICENSE'
+            tar -tzf "${apk_package}" | grep -Fx 'usr/share/doc/kes/NOTICE'
+            tar -tzf "${apk_package}" | grep -Fx 'usr/share/doc/kes/CREDITS'
+
+            test "$(rpm -qp --queryformat '%{ARCH}' "kes-${PKG_VERSION}-1.${rpm_arch}.rpm")" = "${rpm_arch}"
+            test "$(dpkg-deb --field "kes_${PKG_VERSION}_${deb_arch}.deb" Architecture)" = "${deb_arch}"
+            grep -Fx "arch = ${apk_arch}" <<< "$(tar -xOzf "kes_${PKG_VERSION}_${apk_arch}.apk" .PKGINFO)"
+
+            source_binary="$(find .. -maxdepth 2 -type f -path "../kes_linux_${arch}*/kes" | head -n 1)"
+            source_sha="$(sha256sum "${source_binary}" | awk '{print $1}')"
+
+            # Do not pipe rpm2cpio here: Debian's build exits non-zero even when
+            # it writes a correct payload, which trips `set -o pipefail` and made
+            # this whole step unrunnable on ubuntu-latest. Use rpm's own digests
+            # instead -- -K checks the payload against the header, and
+            # FILEDIGESTS is the sha256 rpm itself verifies on install.
+            rpm -K "kes-${PKG_VERSION}-1.${rpm_arch}.rpm"
+            rpm_sha="$(rpm -qp --queryformat '[%{FILENAMES} %{FILEDIGESTS}\n]' \
+              "kes-${PKG_VERSION}-1.${rpm_arch}.rpm" | awk '$1 == "/usr/local/bin/kes" { print $2 }')"
+            deb_sha="$(ar p "kes_${PKG_VERSION}_${deb_arch}.deb" data.tar.gz | tar -xzOf - ./usr/local/bin/kes | sha256sum | awk '{print $1}')"
+            apk_sha="$(tar -xzOf "kes_${PKG_VERSION}_${apk_arch}.apk" usr/local/bin/kes | sha256sum | awk '{print $1}')"
+
+            test "${source_sha}" = "${rpm_sha}"
+            test "${source_sha}" = "${deb_sha}"
+            test "${source_sha}" = "${apk_sha}"
+          done
+
+      # docker-release.yml is workflow_dispatch only, so Dockerfile is
+      # otherwise never built until a real publish. Assemble the same context it
+      # builds and exercise the image here, without pushing anything.
+      - name: Build release container image (no push)
+        run: |
+          set -euo pipefail
+          context="$(mktemp -d)"
+          tar -xzf "dist/kes_${PKG_VERSION}_linux_amd64.tar.gz" -C "${context}" kes
+          cp Dockerfile LICENSE NOTICE CREDITS "${context}/"
+          docker build --tag kes-release-test:snapshot \
+            --file "${context}/Dockerfile" "${context}"
+          docker run --rm kes-release-test:snapshot --version
+          docker image inspect kes-release-test:snapshot \
+            --format '{{ index .Config.Labels "org.opencontainers.image.vendor" }}' | grep -Fx PGSTY
+
+      - name: Validate release scripts
+        run: |
+          set -euo pipefail
+          bash -n buildscripts/package-release.sh
+          bash -n buildscripts/sign-release-rpms.sh
+          bash -n buildscripts/verify-rpm-payload.sh
+          bash -n buildscripts/verify-build-provenance.sh
+          bash -n buildscripts/check-release-state.sh
+          bash -n buildscripts/check-release-state_test.sh
+          bash -n buildscripts/check-release-commit.sh
+          bash -n buildscripts/check-release-commit_test.sh
+          bash -n buildscripts/verify-release-tag.sh
+          bash -n buildscripts/verify-release-tag_test.sh
+          bash -n buildscripts/verify-release-attestation.sh
+          bash -n buildscripts/verify-release-attestation_test.sh
+          bash -n buildscripts/verify-elf-arch.sh
+          bash -n buildscripts/verify-elf-arch_test.sh
+          test -x buildscripts/package-release.sh
+          test -x buildscripts/sign-release-rpms.sh
+          test -x buildscripts/verify-rpm-payload.sh
+          test -x buildscripts/verify-build-provenance.sh
+          test -x buildscripts/check-release-state.sh
+          test -x buildscripts/check-release-state_test.sh
+          test -x buildscripts/check-release-commit.sh
+          test -x buildscripts/check-release-commit_test.sh
+          test -x buildscripts/verify-release-tag.sh
+          test -x buildscripts/verify-release-tag_test.sh
+          test -x buildscripts/verify-release-attestation.sh
+          test -x buildscripts/verify-release-attestation_test.sh
+          test -x buildscripts/verify-elf-arch.sh
+          test -x buildscripts/verify-elf-arch_test.sh
+          buildscripts/check-release-state_test.sh
+          buildscripts/check-release-commit_test.sh
+          buildscripts/verify-release-tag_test.sh
+          buildscripts/verify-release-attestation_test.sh
+          buildscripts/verify-elf-arch_test.sh
+          # The snapshot binaries are real ELF files: the architecture check
+          # must accept them and reject the swap.
+          buildscripts/verify-elf-arch.sh "$(find dist -maxdepth 2 -type f -path 'dist/kes_linux_amd64*/kes' | head -n 1)" amd64
+          buildscripts/verify-elf-arch.sh "$(find dist -maxdepth 2 -type f -path 'dist/kes_linux_arm64*/kes' | head -n 1)" arm64
+          if buildscripts/verify-elf-arch.sh "$(find dist -maxdepth 2 -type f -path 'dist/kes_linux_arm64*/kes' | head -n 1)" amd64; then
+            echo "verify-elf-arch accepted an arm64 binary as amd64" >&2
+            exit 1
+          fi
