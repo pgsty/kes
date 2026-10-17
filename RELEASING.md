@@ -39,7 +39,7 @@ commit; `KES_BASELINE` must point to a binary built before the SDK migration.
 
 ## Local build rehearsal
 
-Use the Go toolchain in `go.mod`, GoReleaser 2.18.1 and nFPM 2.47.0. Package
+Use the Go toolchain in `go.mod`, GoReleaser 2.18.3 and nFPM 2.48.0. Package
 verification in the workflow additionally uses `rpm`, `dpkg-deb` and binutils
 on Linux. The provenance check requires a committed, clean checkout.
 
