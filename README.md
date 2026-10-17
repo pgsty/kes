@@ -24,11 +24,11 @@
 > [!IMPORTANT]
 > **PGSTY KES** is an independent, community-maintained fork of the open-source [MinIO KES](https://github.com/minio/kes), maintained in [`pgsty/kes`](https://github.com/pgsty/kes) for the SILO ecosystem. It is not affiliated with, endorsed by, or sponsored by MinIO, Inc. References to MinIO identify the upstream project, its authors or compatibility identifiers.
 
-## Current release and development
+## Current release
 
-The first PGSTY KES release is in preparation. As of **2026-10-17**, this repository has no published PGSTY releases. Use the source build below; [GitHub Releases](https://github.com/pgsty/kes/releases) records which artifacts are available.
+**[20261018000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)** is the first PGSTY KES release. The Git and container tag is `RELEASE.2026-10-18T00-00-00Z`; the package version is `20261018000000.0.0`, following SILO and mcli.
 
-The build pipeline validates binaries, packages and a container image before publication. Signed release tags prepare a Draft GitHub Release; container publication is a separate step. Build and signing procedures are documented in [RELEASING.md](RELEASING.md).
+This release builds with Go 1.27.2, updates dependencies, migrates AWS Secrets Manager to AWS SDK for Go v2, and preserves the KES API, configuration and stored keys. Upgrade and rollback tests cover SILO with OpenBao KV v2 and the Moto Secrets Manager emulator. See the [release notes](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z) for changes and validation scope.
 
 <a id="what-is-kes"></a>
 
@@ -84,14 +84,40 @@ Start a configured server with `kes server --config /path/to/server-config.yaml`
 
 ## Install
 
-The build pipeline produces the following formats. Until the first release is published, use the source build above.
+Download a versioned artifact from [GitHub Releases](https://github.com/pgsty/kes/releases), or use the official [Docker Hub image](https://hub.docker.com/r/pgsty/kes).
 
 | Method | Target and availability |
 | :-- | :-- |
 | Source | `go build -trimpath -o kes ./cmd/kes` from the PGSTY checkout |
 | Binaries | Linux, macOS and Windows on `amd64` and `arm64`; distributed through [GitHub Releases](https://github.com/pgsty/kes/releases) |
 | Packages | RPM, DEB and APK for Linux on `amd64` and `arm64`; distributed as release assets |
-| Container | Publication target `docker.io/pgsty/kes`, for `linux/amd64` and `linux/arm64`; published separately after a GitHub release |
+| Container | `docker.io/pgsty/kes`, for `linux/amd64` and `linux/arm64`; versioned release tags and `latest` |
+
+For example, download and verify the Linux amd64 archive:
+
+```bash
+tag=RELEASE.2026-10-18T00-00-00Z
+version=20261018000000.0.0
+archive="kes_${version}_linux_amd64.tar.gz"
+base="https://github.com/pgsty/kes/releases/download/${tag}"
+curl -fLO "${base}/${archive}"
+curl -fLO "${base}/kes_${version}_checksums.txt"
+grep -F "  ${archive}" "kes_${version}_checksums.txt" | sha256sum --check
+tar -xzf "${archive}" kes
+./kes --version
+```
+
+For containers, pin the version in deployments:
+
+```bash
+docker run --rm pgsty/kes:RELEASE.2026-10-18T00-00-00Z --version
+docker run -d --name kes -p 7373:7373 \
+  -v "$PWD/config:/etc/kes:ro" \
+  pgsty/kes:RELEASE.2026-10-18T00-00-00Z \
+  server --config /etc/kes/server-config.yaml
+```
+
+Prepare `config/server-config.yaml` and its referenced certificates first, and configure a persistent key store. The container runs as UID/GID `1000:1000`; mounted configuration and certificates must be readable by that user. It does not generate a production configuration automatically.
 
 Packages install `/usr/local/bin/kes`. Provision configuration, certificates, a key store and service management separately. Archives include both READMEs, LICENSE, NOTICE and CREDITS.
 

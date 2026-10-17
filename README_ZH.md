@@ -26,9 +26,9 @@
 
 ## 当前发行状态
 
-PGSTY KES 正在准备首个发行版。截至 **2026-10-17**，本仓库尚未发布 PGSTY 发行版。目前请按下文从源码构建；实际可用的制品以 [GitHub Releases](https://github.com/pgsty/kes/releases) 为准。
+**[20261018000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)** 是 PGSTY KES 的首个发行版。Git 与容器标签为 `RELEASE.2026-10-18T00-00-00Z`，软件包版本为 `20261018000000.0.0`，与 SILO、mcli 的命名规则一致。
 
-构建流水线会在发布前验证二进制、软件包和容器镜像。签名版本标签用于准备 GitHub Draft Release，容器镜像另行发布。构建、签名与发布流程见 [RELEASING.md](RELEASING.md)。
+本版使用 Go 1.27.2 构建，更新依赖，将 AWS Secrets Manager 迁移到 AWS SDK for Go v2，并保留 KES API、配置与已存密钥。升级和回滚测试覆盖 SILO 搭配 OpenBao KV v2，以及 Moto Secrets Manager 模拟器。具体变更与验收范围见[发行说明](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)。
 
 <a id="overview"></a>
 
@@ -88,14 +88,40 @@ DEK 响应包含用于加密数据的明文密钥，以及应与数据一起保�
 
 ## 安装
 
-构建流水线生成以下格式；首个发行版发布前，请使用上面的源码构建方式。
+从 [GitHub Releases](https://github.com/pgsty/kes/releases) 下载指定版本的制品，或使用官方 [Docker Hub 镜像](https://hub.docker.com/r/pgsty/kes)。
 
 | 方式 | 目标与获取位置 |
 | :-- | :-- |
 | 源码构建 | 在 PGSTY 仓库执行 `go build -trimpath -o kes ./cmd/kes` |
 | 二进制 | Linux、macOS、Windows 的 `amd64` 与 `arm64`，通过 [GitHub Releases](https://github.com/pgsty/kes/releases) 分发 |
 | 软件包 | Linux `amd64` 与 `arm64` 的 RPM、DEB、APK，作为发行版附件分发 |
-| 容器镜像 | 发布目标为 `docker.io/pgsty/kes`，支持 `linux/amd64` 与 `linux/arm64`，在 GitHub 发行版发布后另行发布 |
+| 容器镜像 | `docker.io/pgsty/kes`，支持 `linux/amd64` 与 `linux/arm64`，提供固定版本标签与 `latest` |
+
+例如，下载并校验 Linux amd64 压缩包：
+
+```bash
+tag=RELEASE.2026-10-18T00-00-00Z
+version=20261018000000.0.0
+archive="kes_${version}_linux_amd64.tar.gz"
+base="https://github.com/pgsty/kes/releases/download/${tag}"
+curl -fLO "${base}/${archive}"
+curl -fLO "${base}/kes_${version}_checksums.txt"
+grep -F "  ${archive}" "kes_${version}_checksums.txt" | sha256sum --check
+tar -xzf "${archive}" kes
+./kes --version
+```
+
+使用容器部署时，固定版本标签：
+
+```bash
+docker run --rm pgsty/kes:RELEASE.2026-10-18T00-00-00Z --version
+docker run -d --name kes -p 7373:7373 \
+  -v "$PWD/config:/etc/kes:ro" \
+  pgsty/kes:RELEASE.2026-10-18T00-00-00Z \
+  server --config /etc/kes/server-config.yaml
+```
+
+先准备 `config/server-config.yaml` 及其引用的证书，并配置持久密钥存储。容器以 UID/GID `1000:1000` 运行，挂载的配置与证书必须允许该用户读取；镜像不会自动生成生产配置。
 
 软件包将程序安装到 `/usr/local/bin/kes`；配置文件、证书、密钥存储与服务管理需要另行准备。二进制压缩包包含中英文 README、LICENSE、NOTICE 和 CREDITS。
 
