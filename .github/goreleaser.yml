@@ -48,7 +48,7 @@ checksum:
 release:
   github:
     owner: pgsty
-    name: mc
+    name: kes
   draft: true
   prerelease: false
   replace_existing_draft: true
