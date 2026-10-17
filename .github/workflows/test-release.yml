@@ -92,7 +92,7 @@ jobs:
           for archive in dist/kes_*.tar.gz; do
             count=$((count + 1))
             listing="$(tar -tzf "${archive}")"
-            for member in LICENSE NOTICE CREDITS README.md; do
+            for member in LICENSE NOTICE CREDITS README.md README_ZH.md; do
               grep -Fx "${member}" <<< "${listing}"
               tar -xOzf "${archive}" "${member}" | cmp - "${member}"
             done

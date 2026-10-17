@@ -33,7 +33,9 @@ for file in .github/logo.svg .github/arch.png .github/grafana-dashboard.png; do
     fi
 done
 
-require_text README.md '# PGSTY KES'
+for file in README.md README_ZH.md; do
+    require_text "$file" '<h1 align="center">PGSTY KES</h1>'
+done
 require_text NOTICE 'MinIO KES, Copyright (C) 2015-2025 MinIO, Inc.'
 require_text NOTICE 'PGSTY KES modifications, Copyright (C) 2026 PGSTY contributors.'
 require_text NOTICE 'It is not affiliated with, endorsed by, or sponsored by MinIO, Inc.'

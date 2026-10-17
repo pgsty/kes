@@ -40,6 +40,7 @@ archives:
       - NOTICE
       - CREDITS
       - README.md
+      - README_ZH.md
 
 checksum:
   name_template: "kes_{{ .Env.PKG_VERSION }}_checksums.txt"
