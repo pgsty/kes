@@ -1,6 +1,6 @@
 #!/bin/bash
-RESOURCE_GROUP=minio-kes
-SERVICE_PRINCIPAL=minio-kes
+RESOURCE_GROUP=${RESOURCE_GROUP:-pgsty-kes}
+SERVICE_PRINCIPAL=${SERVICE_PRINCIPAL:-pgsty-kes}
 LOCATION=westus
 
 AZ_SUBSCRIPTION_NAME=$(az account show -o tsv --query 'name')
@@ -19,7 +19,7 @@ fi
 # Create a random key-vault-name (should be globally unique)
 KEYVAULT_NAME=$(az keyvault list -g $RESOURCE_GROUP --query '[0].name' -o tsv 2>/dev/null || echo -n)
 if [ -z "$KEYVAULT_NAME" ]; then
-    KEYVAULT_NAME=minio-kes-$(tr -dc a-z </dev/urandom | head -c 6)
+    KEYVAULT_NAME=pgsty-kes-$(tr -dc a-z </dev/urandom | head -c 6)
     echo "Creating key-vault '$KEYVAULT_NAME'"
     az keyvault create -g $RESOURCE_GROUP -l $LOCATION -n $KEYVAULT_NAME --enable-rbac-authorization true > /dev/null
 else

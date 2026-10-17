@@ -1,4 +1,4 @@
-**The KES project welcomes all contributors.**
+**The PGSTY KES project welcomes all contributors.**
 
 This document is a guide to help you getting your pull request merged more
 quickly.
@@ -48,12 +48,12 @@ Fixes #102
 
 ### License
 
-KES is an opensource project licensed under AGPLv3. The license file
-can be found [here](https://github.com/pgsty/kes/blob/master/LICENSE).
+PGSTY KES is licensed under the GNU AGPL v3.0. See [LICENSE](LICENSE)
+and [NOTICE](NOTICE). No CLA or copyright assignment is required.
 
 Contributions to this fork remain under the license in LICENSE. Preserve
 existing copyright notices, identify the authors of new work, and sign off
 commits with `git commit -s` (Developer Certificate of Origin).
 
-Run `go test ./...`, `go vet ./...` and the relevant release checks before
+Run `go test ./...`, `go vet ./...`, `buildscripts/verify-branding.sh` and the relevant release checks before
 opening a pull request. See [RELEASING.md](RELEASING.md) for the pipeline.

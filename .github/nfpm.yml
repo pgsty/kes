@@ -7,10 +7,10 @@ release: ${NFPM_RELEASE}
 section: utils
 priority: optional
 maintainer: "Ruohang Feng (@Vonng) <rh@vonng.com>"
-description: KES key encryption service, a community-maintained fork of MinIO KES.
+description: PGSTY KES key encryption service.
 vendor: PGSTY
 homepage: https://github.com/pgsty/kes
-license: AGPL-3.0-or-later
+license: AGPL-3.0-only
 
 contents:
   - src: ${NFPM_SOURCE}
@@ -58,4 +58,4 @@ rpm:
 deb:
   compression: gzip
   fields:
-    License: AGPL-3.0-or-later
+    License: AGPL-3.0-only

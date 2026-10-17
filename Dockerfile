@@ -5,11 +5,12 @@ RUN microdnf update -y --nodocs && microdnf install ca-certificates --nodocs && 
 FROM registry.access.redhat.com/ubi9/ubi-micro:9.8@sha256:7e7f79ab747bf2b452e3043dd89f388e92be4c7fdcc8b815b58adf6c99c39c95
 
 LABEL maintainer="Ruohang Feng (@Vonng) <rh@vonng.com>" \
+      org.opencontainers.image.title="PGSTY KES" \
       org.opencontainers.image.vendor="PGSTY" \
       org.opencontainers.image.source="https://github.com/pgsty/kes" \
       org.opencontainers.image.url="https://github.com/pgsty/kes" \
-      org.opencontainers.image.description="KES key encryption service, a community-maintained fork of MinIO KES." \
-      org.opencontainers.image.licenses="AGPL-3.0-or-later"
+      org.opencontainers.image.description="PGSTY KES key encryption service." \
+      org.opencontainers.image.licenses="AGPL-3.0-only"
 
 
 # On RHEL the certificate bundle is located at:

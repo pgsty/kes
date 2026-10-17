@@ -3,11 +3,13 @@ name: Bug report
 about: Please use this template if you want to report a bug.
 title: ''
 labels: ''
-assignees: aead
+assignees: ''
 
 ---
 
-#### Bug describtion
+Please report vulnerabilities privately as described in [SECURITY.md](https://github.com/pgsty/kes/blob/master/SECURITY.md).
+
+#### Bug description
 <!--
 If possible, provide a recipe for reproducing the error.
 Ideally provide a code snippet that shows the bug.
@@ -18,7 +20,7 @@ Ideally provide a code snippet that shows the bug.
 
 #### Additional context
 
-1. What version of Go are you using (`go version`)?
+1. What PGSTY KES version are you using (`kes --version`)?
 
 2. What operating system and processor architecture are you using (`go env`)?
 

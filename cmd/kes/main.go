@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	tui "github.com/charmbracelet/lipgloss"
 	"github.com/minio/kes/internal/cli"
@@ -27,7 +26,9 @@ import (
 
 type commands = map[string]func([]string)
 
-const usage = `Usage:
+const usage = productName + ` - Key Encryption Service
+
+Usage:
     kes [options] <command>
 
 Commands:
@@ -110,9 +111,11 @@ func main() {
 		faint := tui.NewStyle().Faint(true)
 		buf := &strings.Builder{}
 		fmt.Fprintf(buf, "Version    %-22s %s\n", info.Version, faint.Render("commit="+info.CommitID))
+		fmt.Fprintf(buf, "Product    %-22s %s\n", productName, faint.Render(projectURL))
 		fmt.Fprintf(buf, "Runtime    %-22s %s\n", fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
 		fmt.Fprintf(buf, "License    %-22s %s\n", "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-		fmt.Fprintf(buf, "Copyright  %-22s %s\n", fmt.Sprintf("2015-%d MinIO Inc.", time.Now().Year()), faint.Render("https://min.io"))
+		fmt.Fprintf(buf, "Copyright  %s\n", upstreamCopyright)
+		fmt.Fprintf(buf, "Modified   %s\n", forkCopyright)
 		fmt.Print(buf.String())
 		return
 	}

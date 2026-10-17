@@ -73,7 +73,10 @@ jobs:
         run: |
           set -euo pipefail
           binary="$(find dist -maxdepth 2 -type f -path 'dist/kes_linux_amd64*/kes')"
-          "${binary}" --version | grep -F "${RELEASE_TAG}"
+          version_output="$("${binary}" --version)"
+          for expected in "${RELEASE_TAG}" 'PGSTY KES' '2015-2025 MinIO, Inc.' '2026 PGSTY contributors'; do
+            grep -F "${expected}" <<< "${version_output}"
+          done
           "${binary}" update --help | grep -F 'PGSTY KES does not self-update'
           if "${binary}" update > update-output.txt 2>&1; then
             echo 'kes update must reject in-place self-update' >&2
@@ -91,6 +94,7 @@ jobs:
             listing="$(tar -tzf "${archive}")"
             for member in LICENSE NOTICE CREDITS README.md; do
               grep -Fx "${member}" <<< "${listing}"
+              tar -xOzf "${archive}" "${member}" | cmp - "${member}"
             done
           done
           test "${count}" -eq 6
@@ -217,6 +221,21 @@ jobs:
             test "${source_sha}" = "${rpm_sha}"
             test "${source_sha}" = "${deb_sha}"
             test "${source_sha}" = "${apk_sha}"
+
+            # Attribution must survive packaging byte for byte.
+            for member in LICENSE NOTICE CREDITS; do
+              if [ "${member}" = LICENSE ]; then
+                installed="usr/share/licenses/kes/${member}"
+              else
+                installed="usr/share/doc/kes/${member}"
+              fi
+              source_doc_sha="$(sha256sum "../../${member}" | awk '{print $1}')"
+              rpm_doc_sha="$(rpm -qp --queryformat '[%{FILENAMES} %{FILEDIGESTS}\n]' "${rpm_package}" |
+                awk -v path="/${installed}" '$1 == path { print $2 }')"
+              test "${source_doc_sha}" = "${rpm_doc_sha}"
+              ar p "${deb_package}" data.tar.gz | tar -xzOf - "./${installed}" | cmp - "../../${member}"
+              tar -xzOf "${apk_package}" "${installed}" | cmp - "../../${member}"
+            done
           done
 
       # docker-release.yml is workflow_dispatch only, so Dockerfile is
@@ -233,6 +252,14 @@ jobs:
           docker run --rm kes-release-test:snapshot --version
           docker image inspect kes-release-test:snapshot \
             --format '{{ index .Config.Labels "org.opencontainers.image.vendor" }}' | grep -Fx PGSTY
+          docker image inspect kes-release-test:snapshot \
+            --format '{{ index .Config.Labels "org.opencontainers.image.title" }}' | grep -Fx 'PGSTY KES'
+          container="$(docker create kes-release-test:snapshot --version)"
+          trap 'docker rm "${container}" > /dev/null' EXIT
+          for member in LICENSE NOTICE CREDITS; do
+            docker cp "${container}:/${member}" "${context}/image-${member}"
+            cmp "${member}" "${context}/image-${member}"
+          done
 
       - name: Validate release scripts
         run: |

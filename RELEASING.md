@@ -9,7 +9,8 @@ publishes a release or an image.
 
 All four workflows run on pull requests and pushes to `master`:
 
-- **Go**: build, vet, lint, and unit tests on Linux, macOS and Windows.
+- **Go**: branding and attribution checks, build, vet, lint, and unit tests
+  on Linux, macOS and Windows.
 - **VulnCheck**: reachable Go vulnerabilities; also runs weekly.
 - **KMS Compatibility**: OpenBao KV v2 and released SILO servers, including
   reading objects written through the last upstream KES release after an upgrade.
@@ -29,6 +30,7 @@ on Linux. The provenance check requires a committed, clean checkout.
 ```sh
 go test ./...
 go vet ./...
+buildscripts/verify-branding.sh
 export RELEASE_TAG=RELEASE.2026-02-14T12-00-00Z
 export PKG_VERSION=20260214120000.0.0
 export LDFLAGS="$(go run buildscripts/gen-ldflags.go 2026-02-14T12:00:00Z)"
@@ -43,6 +45,11 @@ Archives use `kes_<package-version>_<os>_<arch>.tar.gz`. The binary is `kes`
 (`kes.exe` on Windows). Linux packages install `/usr/local/bin/kes`; service
 configuration, certificates and a persistent keystore must be provisioned
 separately. Installing the package does not start an unconfigured service.
+
+Package and image metadata uses `AGPL-3.0-only`, matching the upstream source
+headers that specify AGPLv3. LICENSE and all inherited copyright and license
+notices remain unchanged; this fork does not infer a grant for later license
+versions from the example notice at the end of LICENSE.
 
 ## Repository settings
 

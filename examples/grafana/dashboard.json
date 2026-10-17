@@ -82,10 +82,10 @@
       }
     ]
   },
-  "description": "KES Grafana Dashboard - https://min.io/",
+  "description": "PGSTY KES metrics - https://github.com/pgsty/kes",
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "gnetId": 13502,
+  "gnetId": null,
   "graphTooltip": 0,
   "id": null,
   "links": [
@@ -94,7 +94,7 @@
       "includeVars": true,
       "keepTime": true,
       "tags": [
-        "minio"
+        "kes"
       ],
       "type": "dashboards"
     }
@@ -1045,7 +1045,7 @@
   "refresh": "",
   "schemaVersion": 39,
   "tags": [
-    "minio"
+    "kes"
   ],
   "templating": {
     "list": [
@@ -1102,7 +1102,7 @@
     ]
   },
   "timezone": "",
-  "title": "KES Dashboard",
+  "title": "PGSTY KES Dashboard",
   "uid": "TgmJnnnqk",
   "version": 54,
   "weekStart": ""

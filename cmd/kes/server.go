@@ -52,20 +52,19 @@ Options:
     -h, --help               Show list of command-line options
 
 
-MinIO KES is a high-performance distributed key management server.
+PGSTY KES is a distributed key encryption service.
 It is a stateless, self-contained server that uses a separate key
-store as persistence layer. KES servers can be added or removed at
-any point in time to scale out infinitely.
+store for persistence. Multiple KES servers can share the same key store.
 
-   Quick Start: https://github.com/minio/kes#quick-start
-   Docs:        https://min.io/docs/kes/
+   Quick Start: https://github.com/pgsty/kes#quick-start
+   Docs:        https://github.com/pgsty/kes#docs
 	
 Examples:
   1. Start a new KES server on '127.0.0.1:7373' in development mode.
-     $ kes server --dev
+     $ kes server --dev --addr 127.0.0.1:7373
 
-  2. Start a new KES server with a confg file on '127.0.0.1:7000'.
-     $ kes server --addr :7000 --config ./kes/config.yml
+  2. Start a new KES server with a config file on '127.0.0.1:7000'.
+     $ kes server --addr 127.0.0.1:7000 --config ./server-config.yaml
 `
 
 func serverCmd(args []string) {
@@ -195,10 +194,12 @@ func startServer(addrFlag, configFlag string) error {
 		faint := tui.NewStyle().Faint(true)
 
 		buf := &strings.Builder{}
+		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Product"), productName, faint.Render(projectURL))
 		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Version"), info.Version, faint.Render("commit="+info.CommitID))
 		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Runtime"), fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
 		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("License"), "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-		fmt.Fprintf(buf, "%-33s %-12s 2015-%d  %s\n", blue.Render("Copyright"), "MinIO, Inc.", time.Now().Year(), faint.Render("https://min.io"))
+		fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Copyright"), upstreamCopyright)
+		fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Modified"), forkCopyright)
 		fmt.Fprintln(buf)
 		fmt.Fprintf(buf, "%-33s %v\n", blue.Render("KMS"), conf.Keys)
 		fmt.Fprintf(buf, "%-33s · https://%s\n", blue.Render("API"), net.JoinHostPort(ifaceIPs[0].String(), port))
@@ -207,7 +208,7 @@ func startServer(addrFlag, configFlag string) error {
 		}
 
 		fmt.Fprintln(buf)
-		fmt.Fprintf(buf, "%-33s https://min.io/docs/kes\n", blue.Render("Docs"))
+		fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Docs"), docsURL)
 
 		fmt.Fprintln(buf)
 		if _, err := hex.DecodeString(conf.Admin.String()); err == nil {
@@ -360,10 +361,12 @@ func startDevServer(addr string) error {
 	faint := tui.NewStyle().Faint(true)
 
 	buf := &strings.Builder{}
+	fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Product"), productName, faint.Render(projectURL))
 	fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Version"), info.Version, faint.Render("commit="+info.CommitID))
 	fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Runtime"), fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
 	fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("License"), "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-	fmt.Fprintf(buf, "%-33s %-12s 2015-%d  %s\n", blue.Render("Copyright"), "MinIO, Inc.", time.Now().Year(), faint.Render("https://min.io"))
+	fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Copyright"), upstreamCopyright)
+	fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Modified"), forkCopyright)
 	fmt.Fprintln(buf)
 	fmt.Fprintf(buf, "%-33s %v\n", blue.Render("KMS"), conf.Keys)
 	fmt.Fprintf(buf, "%-33s · https://%s\n", blue.Render("API"), net.JoinHostPort(ifaceIPs[0].String(), port))
@@ -371,7 +374,7 @@ func startDevServer(addr string) error {
 		fmt.Fprintf(buf, "%-11s · https://%s\n", " ", net.JoinHostPort(ifaceIP.String(), port))
 	}
 	fmt.Fprintln(buf)
-	fmt.Fprintf(buf, "%-33s https://min.io/docs/kes\n", blue.Render("Docs"))
+	fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Docs"), docsURL)
 	fmt.Fprintln(buf)
 	fmt.Fprintf(buf, "%-33s %s\n", blue.Render("API Key"), apiKey.String())
 	fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Admin"), apiKey.Identity())
@@ -389,7 +392,7 @@ func startDevServer(addr string) error {
 }
 
 // configureCache sets default values for each cache config option
-// as documented in: https://github.com/minio/kes/blob/master/server-config.yaml
+// as documented in: https://github.com/pgsty/kes/blob/master/server-config.yaml
 func configureCache(c *kes.CacheConfig) *kes.CacheConfig {
 	if c == nil {
 		c = &kes.CacheConfig{}
