@@ -206,7 +206,9 @@ jobs:
             # this whole step unrunnable on ubuntu-latest. Use rpm's own digests
             # instead -- -K checks the payload against the header, and
             # FILEDIGESTS is the sha256 rpm itself verifies on install.
-            rpm -K "kes-${PKG_VERSION}-1.${rpm_arch}.rpm"
+            # Snapshot RPMs are unsigned; RPM 6 otherwise rejects their
+            # absent signature even when both digests are correct.
+            rpm --nosignature -K "kes-${PKG_VERSION}-1.${rpm_arch}.rpm"
             rpm_sha="$(rpm -qp --queryformat '[%{FILENAMES} %{FILEDIGESTS}\n]' \
               "kes-${PKG_VERSION}-1.${rpm_arch}.rpm" | awk '$1 == "/usr/local/bin/kes" { print $2 }')"
             deb_sha="$(ar p "kes_${PKG_VERSION}_${deb_arch}.deb" data.tar.gz | tar -xzOf - ./usr/local/bin/kes | sha256sum | awk '{print $1}')"
