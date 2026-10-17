@@ -1,0 +1,18 @@
+MinIO KES, Copyright (C) 2015-2025 MinIO, Inc.
+
+This product includes software developed at MinIO, Inc.
+Original project: https://github.com/minio/kes
+
+Original source copyright notices and license terms are preserved.
+Third-party components have their own copyright notices and license terms,
+collected in CREDITS. See LICENSE for the GNU AGPL v3.0 terms
+applicable to this project.
+
+PGSTY KES modifications, Copyright (C) 2026 PGSTY contributors.
+Maintained source: https://github.com/pgsty/kes
+
+PGSTY KES is an independent, community-maintained fork of MinIO KES.
+It is not affiliated with, endorsed by, or sponsored by MinIO, Inc.
+MinIO is a trademark of MinIO, Inc. The name is used to identify the
+upstream project, its authors and retained compatibility identifiers.
+Modified source and PGSTY release artifacts are maintained by PGSTY.

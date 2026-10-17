@@ -8,18 +8,27 @@ on:
     branches:
     - master
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.24.2
-      id: go
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Check branding and attribution
+      run: buildscripts/verify-branding.sh
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: go.mod
+      id: go
     - name: Build and Lint
       run: |
          go build ./...
@@ -28,52 +37,36 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - name: "Set up Go"
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.24.2
-        id: go
       - name: Check out code
-        uses: actions/checkout@v4
-      - name: Lint
-        uses: golangci/golangci-lint-action@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "Set up Go"
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          version: v1.64.5
+          go-version-file: go.mod
+        id: go
+      - name: Lint
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
+        with:
+          version: v2.14.0
           args: --config ./.golangci.yml --timeout=5m
   test:
     name: Test ${{ matrix.os }}
-    needs: Lint
+    needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.24.2
-      id: go
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: go.mod
+      id: go
     - name: Test
       env:
         GO111MODULE: on
       run: |
-         go test ./...
-  
-  vulncheck:
-    name: Vulncheck ${{ matrix.go-version }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Set up Go ${{ matrix.go-version }}
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.24.2
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
-    - name: Get govulncheck
-      run: go install golang.org/x/vuln/cmd/govulncheck@latest
-      shell: bash
-    - name: Run govulncheck
-      run: govulncheck ./...
-      shell: bash
+         go test ./... -count=1

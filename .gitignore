@@ -7,3 +7,5 @@ kes
 !kes/
 *.test
 dist/
+.release-sign/
+docker-release/

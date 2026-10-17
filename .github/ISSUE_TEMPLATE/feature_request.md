@@ -3,7 +3,7 @@ name: Feature request
 about: Please use this template if you want to suggest an idea.
 title: ''
 labels: feature-request
-assignees: aead
+assignees: ''
 
 ---
 

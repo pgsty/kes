@@ -1,0 +1,61 @@
+name: kes
+arch: ${NFPM_ARCH}
+platform: linux
+version: ${PKG_VERSION}
+version_schema: none
+release: ${NFPM_RELEASE}
+section: utils
+priority: optional
+maintainer: "Ruohang Feng (@Vonng) <rh@vonng.com>"
+description: PGSTY KES key encryption service.
+vendor: PGSTY
+homepage: https://github.com/pgsty/kes
+license: AGPL-3.0-only
+
+contents:
+  - src: ${NFPM_SOURCE}
+    dst: /usr/local/bin/kes
+    expand: true
+    file_info:
+      mode: 0755
+      owner: root
+      group: root
+  - src: LICENSE
+    dst: /usr/share/licenses/kes/LICENSE
+    type: license
+    packager: rpm
+  - src: LICENSE
+    dst: /usr/share/licenses/kes/LICENSE
+    packager: deb
+  - src: LICENSE
+    dst: /usr/share/licenses/kes/LICENSE
+    packager: apk
+  - src: NOTICE
+    dst: /usr/share/doc/kes/NOTICE
+    type: doc
+    packager: rpm
+  - src: NOTICE
+    dst: /usr/share/doc/kes/NOTICE
+    packager: deb
+  - src: NOTICE
+    dst: /usr/share/doc/kes/NOTICE
+    packager: apk
+  - src: CREDITS
+    dst: /usr/share/doc/kes/CREDITS
+    type: doc
+    packager: rpm
+  - src: CREDITS
+    dst: /usr/share/doc/kes/CREDITS
+    packager: deb
+  - src: CREDITS
+    dst: /usr/share/doc/kes/CREDITS
+    packager: apk
+
+rpm:
+  group: Applications/File
+  compression: gzip:9
+
+deb:
+  compression: gzip
+  fields:
+    License: AGPL-3.0-only

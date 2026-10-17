@@ -1,0 +1,65 @@
+name: KMS Compatibility
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compat:
+    name: OpenBao / SILO ${{ matrix.silo }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        silo: [RELEASE.2026-09-16T00-00-00Z, RELEASE.2026-09-03T13-18-01Z]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Build the last upstream KES release as upgrade input
+        run: GOBIN="$RUNNER_TEMP" go install github.com/minio/kes/cmd/kes@3516828509b215fe55dde6676f219f79f101aea8
+      - name: Read existing ciphertext after upgrading KES, then write new objects
+        env:
+          VAULT_IMAGE: openbao/openbao:2.7.1
+          SILO_IMAGE: pgsty/silo:${{ matrix.silo }}
+          KES_BASELINE: ${{ runner.temp }}/kes
+        run: ./testing/kms-compat.sh
+
+  aws:
+    name: Secrets Manager / SILO ${{ matrix.silo }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        silo: [RELEASE.2026-09-16T00-00-00Z, RELEASE.2026-09-03T13-18-01Z]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Build the PGSTY KES baseline using AWS SDK v1
+        run: |
+          baseline=c281c6a95fe19631a357f469a9c70aff88facfdb
+          git fetch --no-tags --depth=1 origin "$baseline"
+          git worktree add --detach "$RUNNER_TEMP/kes-sdk-v1" "$baseline"
+          cd "$RUNNER_TEMP/kes-sdk-v1"
+          go build -o "$RUNNER_TEMP/kes-v1" ./cmd/kes
+      - name: Verify SDK upgrade, rollback and encrypted objects against Moto
+        env:
+          KEYSTORE: aws
+          SILO_IMAGE: pgsty/silo:${{ matrix.silo }}
+          KES_BASELINE: ${{ runner.temp }}/kes-v1
+        run: ./testing/kms-compat.sh

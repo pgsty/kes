@@ -1,4 +1,4 @@
-**The KES project welcomes all contributors.**
+**The PGSTY KES project welcomes all contributors.**
 
 This document is a guide to help you getting your pull request merged more
 quickly.
@@ -48,14 +48,12 @@ Fixes #102
 
 ### License
 
-KES is an opensource project licensed under AGPLv3. The license file
-can be found [here](https://github.com/minio/kes/blob/master/LICENSE).
+PGSTY KES is licensed under the GNU AGPL v3.0. See [LICENSE](LICENSE)
+and [NOTICE](NOTICE). No CLA or copyright assignment is required.
 
-By contributing to KES, you agree to assign the copyright to MinIO.
-Any contributed source file must include the following license
-header:
-```
-// Copyright <YEAR> - MinIO, Inc. All rights reserved.
-// Use of this source code is governed by the AGPLv3
-// license that can be found in the LICENSE file.
- ```
+Contributions to this fork remain under the license in LICENSE. Preserve
+existing copyright notices, identify the authors of new work, and sign off
+commits with `git commit -s` (Developer Certificate of Origin).
+
+Run `go test ./...`, `go vet ./...`, `buildscripts/verify-branding.sh` and the relevant release checks before
+opening a pull request. See [RELEASING.md](RELEASING.md) for the pipeline.

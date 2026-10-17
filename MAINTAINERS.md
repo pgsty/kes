@@ -1,22 +1,13 @@
-# Release versioning
+# Maintaining PGSTY KES
 
-KES server is released with time based version tags, similar to MinIO server.
+The build, signing and publication procedure is maintained in
+[RELEASING.md](RELEASING.md). Use the reviewed workflows described there.
 
-To get the release name in the appropriate format, run the following with the code checked out at the desired revision:
+Release tags use `RELEASE.YYYY-MM-DDTHH-MM-SSZ` in UTC. The workflows build a
+Draft release from a signed tag and require separate approval to publish
+artifacts or container images.
 
-```shell
-TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H-%M-%SZ' --format="%cd"
-```
-
-# Making a release
-
-Set the GITHUB_TOKEN environment variable to the token for the account making the release and run goreleaser:
-
-```shell
-export GITHUB_TOKEN=mytokenvalue
-goreleaser --clean 
-
-```
-
-
-
+Product wording and links identify PGSTY KES. Preserve upstream copyright
+headers, LICENSE, CREDITS and the attribution in NOTICE. Keep compatibility
+identifiers documented in [README.md](README.md#compatibility-and-attribution).
+Run `buildscripts/verify-branding.sh` when changing these surfaces.

@@ -30,8 +30,8 @@ func TestValidPattern(t *testing.T) {
 func BenchmarkValidName(b *testing.B) {
 	const (
 		EmptyName   = ""
-		ValidName   = "my-minio-key"
-		InvalidName = "my-minio-key*"
+		ValidName   = "my-app-key"
+		InvalidName = "my-app-key*"
 	)
 
 	b.Run("empty", func(b *testing.B) {
@@ -54,8 +54,8 @@ func BenchmarkValidName(b *testing.B) {
 func BenchmarkValidPattern(b *testing.B) {
 	const (
 		MatchAll       = "*"
-		ValidPattern   = "my-minio-key*"
-		InvalidPattern = "my-minio-key/"
+		ValidPattern   = "my-app-key*"
+		InvalidPattern = "my-app-key/"
 	)
 
 	b.Run("matchall", func(b *testing.B) {

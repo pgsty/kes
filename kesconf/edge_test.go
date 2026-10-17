@@ -9,11 +9,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"math/rand"
 	"os"
 	"os/signal"
 	"testing"
+	"time"
 
 	"github.com/minio/kes"
 	kesdk "github.com/minio/kms-go/kes"
@@ -41,7 +41,7 @@ var createTests = []struct {
 }
 
 func testCreate(ctx context.Context, store kes.KeyStore, t *testing.T, seed string) {
-	defer clean(ctx, store, t)
+	store = trackTestKeys(t, store)
 	for i, test := range createTests {
 		if test.Setup != nil {
 			if err := test.Setup(ctx, store, fmt.Sprintf("%s-%d", seed, i)); err != nil {
@@ -87,7 +87,7 @@ var getTests = []struct {
 }
 
 func testGet(ctx context.Context, store kes.KeyStore, t *testing.T, seed string) {
-	defer clean(ctx, store, t)
+	store = trackTestKeys(t, store)
 	for i, test := range getTests {
 		if test.Setup != nil {
 			if err := test.Setup(ctx, store, fmt.Sprintf("%s-%d", seed, i)); err != nil {
@@ -129,23 +129,34 @@ func testingContext(t *testing.T) (context.Context, context.CancelFunc) {
 	return context.WithDeadline(osCtx, d)
 }
 
-func clean(ctx context.Context, store kes.KeyStore, t *testing.T) {
-	iter := kesdk.ListIter[string]{
-		NextFunc: store.List,
-	}
+// trackTestKeys only removes keys successfully created by this test. Never
+// enumerate and delete the contents of an externally configured key store.
+func trackTestKeys(t *testing.T, store kes.KeyStore) *trackedKeyStore {
+	t.Helper()
+	s := &trackedKeyStore{KeyStore: store}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		for _, name := range s.created {
+			if err := store.Delete(ctx, name); err != nil && !errors.Is(err, kesdk.ErrKeyNotFound) {
+				t.Errorf("Cleanup: failed to delete '%s': %v", name, err)
+			}
+		}
+	})
+	return s
+}
 
-	var names []string
-	for next, err := iter.Next(ctx); err != io.EOF; next, err = iter.Next(ctx) {
-		if err != nil {
-			t.Errorf("Cleanup: failed to list: %v", err)
-		}
-		names = append(names, next)
+type trackedKeyStore struct {
+	kes.KeyStore
+	created []string
+}
+
+func (s *trackedKeyStore) Create(ctx context.Context, name string, value []byte) error {
+	if err := s.KeyStore.Create(ctx, name, value); err != nil {
+		return err
 	}
-	for _, name := range names {
-		if err := store.Delete(ctx, name); err != nil && !errors.Is(err, kesdk.ErrKeyNotFound) {
-			t.Errorf("Cleanup: failed to delete '%s': %v", name, err)
-		}
-	}
+	s.created = append(s.created, name)
+	return nil
 }
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

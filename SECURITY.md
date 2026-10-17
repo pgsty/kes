@@ -1,40 +1,30 @@
 # Security Policy
 
+PGSTY KES is an independent, community-maintained fork of MinIO KES.
+Security reports for this fork are handled by PGSTY maintainers.
+
 ## Supported Versions
 
-We always provide security updates for the [latest release](https://github.com/minio/kes/releases/latest).
-Whenever there is a security update you just need to upgrade to the latest version.
+Security fixes are developed on `master` and included in the next
+[PGSTY KES release](https://github.com/pgsty/kes/releases).
+Only the latest PGSTY release is maintained; historical upstream releases
+are retained as migration references, not supported releases of this fork.
 
 ## Reporting a Vulnerability
 
-All security bugs in [minio/kes](https://github,com/minio/kes) should be reported by email to security@min.io.
-Your email will be acknowledged within 48 hours, and you'll receive a more detailed response to your email
-within 72 hours indicating the next steps in handling your report.
+Report suspected vulnerabilities privately to the repository maintainer at
+[rh@vonng.com](mailto:rh@vonng.com). Do not include exploit details,
+credentials or encryption keys in a public issue.
 
-Please, provide a detailed explanation of the issue. In particular, outline the type of the security
-issue (DoS, authentication bypass, information disclose, ...) and the assumptions you're making (e.g. do
-you need access credentials for a successful exploit).
+Include the affected version or commit, configuration with secrets removed,
+reproduction steps, required access and expected impact. Tell us whether you
+would like to be credited when the issue is disclosed.
 
-If you have not received a reply to your email within 48 hours or you have not heard from the security team
-for the past five days please contact the security team directly:
-   - Primary security coordinator: aead@min.io
-   - Secondary coordinator: harsha@min.io
-   - If you receive no response: dev@min.io
+## Disclosure Process
 
-### Disclosure Process
-
-MinIO uses the following disclosure process:
-
-1. Once the security report is received one member of the security team tries to verify and reproduce
-   the issue and determines the impact it has.
-2. A member of the security team will respond and either confirm or reject the security report.
-   If the report is rejected the response explains why.
-3. Code is audited to find any potential similar problems.
-4. Fixes are prepared for the latest release.
-5. On the date that the fixes are applied a security advisory will be published on https://github.com/minio/kes/security/advisories.
-   Please inform us in your report email whether MinIO should mention your contribution w.r.t. fixing
-   the security issue. By default MinIO will **not** publish this information to protect your privacy.
-
-This process can take some time, especially when coordination is required with maintainers of other projects.
-Every effort will be made to handle the bug in as timely a manner as possible, however it's important that we
-follow the process described above to ensure that disclosures are handled consistently.
+Maintainers will assess the report, reproduce the issue and coordinate a fix.
+Fixes and upgrade instructions will be published through this repository's
+[security advisories](https://github.com/pgsty/kes/security/advisories) and
+release notes. If other projects are affected, disclosure may require
+coordination with their maintainers. This community project does not promise
+a fixed response time.

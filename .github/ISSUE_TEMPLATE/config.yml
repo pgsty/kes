@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: MinIO Community Support
-    url: https://slack.min.io
-    about: Join here for Community Support.
-  - name: MinIO SUBNET Support
-    url: https://min.io/pricing
-    about: Join here for Enterprise Support.
+  - name: PGSTY KES Documentation
+    url: https://github.com/pgsty/kes#docs
+    about: Configuration, CLI help and SILO integration for this fork.
+  - name: Report a Vulnerability
+    url: https://github.com/pgsty/kes/blob/master/SECURITY.md
+    about: Please report vulnerabilities privately using the maintainer contact in this policy.
