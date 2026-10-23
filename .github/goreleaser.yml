@@ -35,6 +35,10 @@ archives:
     ids:
       - kes
     name_template: "kes_{{ .Env.PKG_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    formats: ["tar.gz"]
+    format_overrides:
+      - goos: windows
+        formats: ["zip"]
     files:
       - LICENSE
       - NOTICE

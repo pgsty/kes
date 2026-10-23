@@ -177,6 +177,7 @@ jobs:
         with:
           subject-path: |
             dist/kes_*.tar.gz
+            dist/kes_*.zip
             dist/kes_*_checksums.txt
             dist/packages/*.deb
             dist/packages/*.apk

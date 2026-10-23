@@ -57,7 +57,11 @@ buildscripts/package-release.sh
 ```
 
 The date above is a fixture for local testing, not a release to publish.
-Archives use `kes_<package-version>_<os>_<arch>.tar.gz`. The binary is `kes`
+Linux and macOS archives use `kes_<package-version>_<os>_<arch>.tar.gz`;
+Windows archives use `kes_<package-version>_windows_<arch>.zip` for native
+PowerShell `Expand-Archive` support. This applies to releases built from this
+configuration; the published 20261018 Windows archives remain `.tar.gz`.
+The binary is `kes`
 (`kes.exe` on Windows). Linux packages install `/usr/local/bin/kes`; service
 configuration, certificates and a persistent keystore must be provisioned
 separately. Installing the package does not start an unconfigured service.
