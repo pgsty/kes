@@ -1,8 +1,23 @@
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:8eb2830d0936237fc13a1f2f7e45aecf90d69043380ad167fad0343632937f41 AS build
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:c4c285d42941ebb2bd4da878479008e1e4536bb599aad1dbe568f89de9053661 AS build
 
-RUN microdnf update -y --nodocs && microdnf install ca-certificates --nodocs && microdnf clean all
+# Native root blocklist mitigation: https://access.redhat.com/security/vulnerabilities/RHSB-2026-012
+RUN microdnf update -y --nodocs && \
+    microdnf install ca-certificates --nodocs && \
+    if [ -d /etc/pki/ca-trust/source/blocklist ]; then \
+      blocklist=/etc/pki/ca-trust/source/blocklist; \
+    else \
+      blocklist=/etc/pki/ca-trust/source/blacklist; \
+    fi && \
+    trust extract --overwrite --format=pem-bundle \
+      --filter='pkcs11:object=Comodo%20AAA%20Services%20root;type=cert' \
+      "$blocklist/Comodo_AAA_Services_root.pem" && \
+    trust extract --overwrite --format=pem-bundle \
+      --filter='pkcs11:object=emSign%20ECC%20Root%20CA%20-%20G3;type=cert' \
+      "$blocklist/emSign_ECC_Root_CA_-_G3.pem" && \
+    update-ca-trust && \
+    microdnf clean all
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.8@sha256:7e7f79ab747bf2b452e3043dd89f388e92be4c7fdcc8b815b58adf6c99c39c95
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.8@sha256:5be877a2a280ae36eb9ab80ca4efb28bbf77c57abbba38137cdc37a03b8465e6
 
 LABEL maintainer="Ruohang Feng (@Vonng) <rh@vonng.com>" \
       org.opencontainers.image.title="PGSTY KES" \
