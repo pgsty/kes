@@ -24,6 +24,12 @@
 > [!IMPORTANT]
 > **PGSTY KES** is an independent, community-maintained fork of the open-source [MinIO KES](https://github.com/minio/kes), maintained in [`pgsty/kes`](https://github.com/pgsty/kes) for the SILO ecosystem. It is not affiliated with, endorsed by, or sponsored by MinIO, Inc. References to MinIO identify the upstream project, its authors or compatibility identifiers.
 
+## Next release: 20261025000000 (in preparation)
+
+The next maintenance release is being prepared as `RELEASE.2026-10-25T00-00-00Z`, with package version `20261025000000.0.0`. It builds with Go 1.27.3 and updates AWS Secrets Manager, Google Secret Manager, Google API, certificate handling and metrics dependencies. It also refreshes the UBI 9.8 container trust store and uses ZIP archives on Windows. The KES API, configuration and stored key formats remain compatible.
+
+This candidate is not published. The release gate covers upgrades from PGSTY KES 20261018 and AWS SDK v1, including rollback and cold encrypted-object reads with SILO 20261018, 20260916 and 20260903. See [RELEASING.md](RELEASING.md) for the required checks and separate artifact/image publication steps.
+
 ## Current release
 
 **[20261018000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)** is the first PGSTY KES release. The Git and container tag is `RELEASE.2026-10-18T00-00-00Z`; the package version is `20261018000000.0.0`, following SILO and mcli.

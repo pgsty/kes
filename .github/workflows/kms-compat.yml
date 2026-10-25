@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  attestations: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -22,18 +23,52 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        silo: [RELEASE.2026-09-16T00-00-00Z, RELEASE.2026-09-03T13-18-01Z]
+        silo: [RELEASE.2026-10-18T00-00-00Z, RELEASE.2026-09-16T00-00-00Z, RELEASE.2026-09-03T13-18-01Z]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: Build the last upstream KES release as upgrade input
-        run: GOBIN="$RUNNER_TEMP" go install github.com/minio/kes/cmd/kes@3516828509b215fe55dde6676f219f79f101aea8
+      - name: Verify the last PGSTY KES release as upgrade input
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=RELEASE.2026-10-18T00-00-00Z
+          commit=2f7e741db905d7ea755967b29666657d819d7ad0
+          archive=kes_20261018000000.0.0_linux_amd64.tar.gz
+          checksums=kes_20261018000000.0.0_checksums.txt
+          baseline_dir="$RUNNER_TEMP/kes-baseline"
+          mkdir -p "$baseline_dir"
+          gh release download "$tag" --repo pgsty/kes --dir "$baseline_dir" \
+            --pattern "$archive" --pattern "$checksums"
+          buildscripts/verify-release-attestation.sh "$tag" "$commit" \
+            "$baseline_dir/$archive" "$baseline_dir/$checksums"
+          (cd "$baseline_dir" && grep -F "  $archive" "$checksums" | sha256sum --check)
+          tar -xzf "$baseline_dir/$archive" -C "$baseline_dir" kes
       - name: Read existing ciphertext after upgrading KES, then write new objects
         env:
           VAULT_IMAGE: openbao/openbao:2.7.1
           SILO_IMAGE: pgsty/silo:${{ matrix.silo }}
+          KES_BASELINE: ${{ runner.temp }}/kes-baseline/kes
+        run: ./testing/kms-compat.sh
+
+  upstream:
+    name: Best-effort upstream KES upgrade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Build the last upstream KES release as advisory upgrade input
+        run: GOBIN="$RUNNER_TEMP" go install github.com/minio/kes/cmd/kes@3516828509b215fe55dde6676f219f79f101aea8
+      - name: Read upstream KES ciphertext through PGSTY KES
+        env:
+          VAULT_IMAGE: openbao/openbao:2.7.1
+          SILO_IMAGE: pgsty/silo:RELEASE.2026-10-18T00-00-00Z
           KES_BASELINE: ${{ runner.temp }}/kes
         run: ./testing/kms-compat.sh
 
@@ -44,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        silo: [RELEASE.2026-09-16T00-00-00Z, RELEASE.2026-09-03T13-18-01Z]
+        silo: [RELEASE.2026-10-18T00-00-00Z, RELEASE.2026-09-16T00-00-00Z, RELEASE.2026-09-03T13-18-01Z]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

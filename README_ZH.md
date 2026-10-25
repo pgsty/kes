@@ -24,6 +24,12 @@
 > [!IMPORTANT]
 > **PGSTY KES** 是面向 SILO 生态、在 [`pgsty/kes`](https://github.com/pgsty/kes) 独立维护的开源 [MinIO KES](https://github.com/minio/kes) 社区分支。本项目与 MinIO, Inc. 不存在隶属、背书或赞助关系；文中使用 “MinIO” 仅用于说明上游项目、原作者及兼容性标识。
 
+## 下一版本：20261025000000（准备中）
+
+下一维护版计划使用标签 `RELEASE.2026-10-25T00-00-00Z`，软件包版本为 `20261025000000.0.0`。本版使用 Go 1.27.3，更新 AWS Secrets Manager、Google Secret Manager、Google API、证书处理和监控指标依赖，同时更新 UBI 9.8 容器信任库，Windows 归档改用 ZIP。KES API、配置与已存密钥格式保持兼容。
+
+候选版本尚未发布。发布门禁覆盖从 PGSTY KES 20261018 和 AWS SDK v1 升级、回退，以及搭配 SILO 20261018、20260916、20260903 重启后的加密对象读回。必需检查及制品、镜像各自的发布步骤见 [RELEASING.md](RELEASING.md)。
+
 ## 当前发行状态
 
 **[20261018000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)** 是 PGSTY KES 的首个发行版。Git 与容器标签为 `RELEASE.2026-10-18T00-00-00Z`，软件包版本为 `20261018000000.0.0`，与 SILO、mcli 的命名规则一致。

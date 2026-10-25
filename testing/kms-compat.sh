@@ -10,7 +10,7 @@
 #   KEYSTORE      vault (default) or aws (Moto, not live AWS certification)
 #   VAULT_IMAGE   key store image (default openbao/openbao:2.7.1)
 #   MOTO_IMAGE    pinned Moto Secrets Manager emulator image
-#   SILO_IMAGE    default pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+#   SILO_IMAGE    default pgsty/silo:RELEASE.2026-10-18T00-00-00Z
 #   KES           KES binary under test (default: built from this tree)
 #   KES_BASELINE  optional KES binary to write with first
 #
@@ -22,7 +22,7 @@ umask 077
 VAULT_IMAGE=${VAULT_IMAGE:-openbao/openbao:2.7.1}
 KEYSTORE=${KEYSTORE:-vault}
 MOTO_IMAGE=${MOTO_IMAGE:-motoserver/moto:5.2.4@sha256:120b1589c6df7e35d2092935f6ff724486bb2c4189d0e36ce795baba1400ffd2}
-SILO_IMAGE=${SILO_IMAGE:-pgsty/silo:RELEASE.2026-09-16T00-00-00Z}
+SILO_IMAGE=${SILO_IMAGE:-pgsty/silo:RELEASE.2026-10-18T00-00-00Z}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=$(mktemp -d)
 VAULT=http://127.0.0.1:18200

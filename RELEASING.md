@@ -12,11 +12,15 @@ All four workflows run on pull requests and pushes to `master`:
 - **Go**: branding and attribution checks, build, vet, lint, and unit tests
   on Linux, macOS and Windows.
 - **VulnCheck**: reachable Go vulnerabilities; also runs weekly.
-- **KMS Compatibility**: OpenBao KV v2 and released SILO servers, including
-  reading objects written through the last upstream KES release after an upgrade.
+- **KMS Compatibility**: OpenBao KV v2 and released SILO 20261018, 20260916
+  and 20260903 servers, including reading objects written through the last
+  PGSTY KES release after an upgrade. The baseline archive and checksum manifest
+  are verified against their GitHub build attestations before use.
   A separate Moto Secrets Manager job checks AWS SDK v1/v2 upgrades and rollback.
   Both fixtures restart SILO between KES versions so cached keys cannot hide
   backend failures. Moto is local protocol coverage, not live AWS certification.
+  Upgrade from the last upstream KES release remains a separate best-effort
+  advisory job; only the maintained PGSTY stack gates this release.
 - **Test Release Pipeline**: six cross-platform archives, six Linux packages,
   metadata and binary digest checks, provenance stamps, release guard tests,
   and a container build/run without pushing.
