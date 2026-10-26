@@ -24,17 +24,13 @@
 > [!IMPORTANT]
 > **PGSTY KES** 是面向 SILO 生态、在 [`pgsty/kes`](https://github.com/pgsty/kes) 独立维护的开源 [MinIO KES](https://github.com/minio/kes) 社区分支。本项目与 MinIO, Inc. 不存在隶属、背书或赞助关系；文中使用 “MinIO” 仅用于说明上游项目、原作者及兼容性标识。
 
-## 下一版本：20261025000000（准备中）
+## 版本 20261025000000
 
-下一维护版计划使用标签 `RELEASE.2026-10-25T00-00-00Z`，软件包版本为 `20261025000000.0.0`。本版使用 Go 1.27.3，更新 AWS Secrets Manager、Google Secret Manager、Google API、证书处理和监控指标依赖，同时更新 UBI 9.8 容器信任库，Windows 归档改用 ZIP。KES API、配置与已存密钥格式保持兼容。
+**[20261025000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-25T00-00-00Z)** 使用 Git 标签 `RELEASE.2026-10-25T00-00-00Z`，软件包版本为 `20261025000000.0.0`。本版使用 Go 1.27.3，更新 25 项 Go 依赖，涵盖 AWS Secrets Manager、Google Secret Manager、Google API、证书处理和监控指标。Windows 归档改用 ZIP。KES API、配置与已存密钥格式保持兼容。
 
-候选版本尚未发布。发布门禁覆盖从 PGSTY KES 20261018 和 AWS SDK v1 升级、回退，以及搭配 SILO 20261018、20260916、20260903 重启后的加密对象读回。必需检查及制品、镜像各自的发布步骤见 [RELEASING.md](RELEASING.md)。
+升级和回退验证覆盖 OpenBao KV v2、Moto Secrets Manager 模拟器，以及 SILO 20261018、20260916、20260903；每次版本切换都重启 SILO，检查不依赖密钥缓存的加密对象读回。Moto 与协议测试不等于真实云账号验收。Go 漏洞扫描未发现受影响的导入包；GO-2026-5932 仍是未导入 OpenPGP 包的上游模块级告警。
 
-## 当前发行状态
-
-**[20261018000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)** 是 PGSTY KES 的首个发行版。Git 与容器标签为 `RELEASE.2026-10-18T00-00-00Z`，软件包版本为 `20261018000000.0.0`，与 SILO、mcli 的命名规则一致。
-
-本版使用 Go 1.27.2 构建，更新依赖，将 AWS Secrets Manager 迁移到 AWS SDK for Go v2，并保留 KES API、配置与已存密钥。升级和回滚测试覆盖 SILO 搭配 OpenBao KV v2，以及 Moto Secrets Manager 模拟器。具体变更与验收范围见[发行说明](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)。
+另见统一维护公告（[中文](https://silo.pgsty.com/zh/blog/release/silo-20261025/) / [English](https://silo.pgsty.com/blog/release/silo-20261025/)）、[SILO—KES—OpenBao 设计](https://silo.pgsty.com/zh/blog/design/kes-openbao/)及 [RELEASING.md](RELEASING.md)。KES 按需独立发布和部署，不嵌入 SILO Server。Docker Hub 镜像单独发布，下方容器示例仍使用已发布的 20261018 镜像。
 
 <a id="overview"></a>
 
@@ -106,8 +102,8 @@ DEK 响应包含用于加密数据的明文密钥，以及应与数据一起保�
 例如，下载并校验 Linux amd64 压缩包：
 
 ```bash
-tag=RELEASE.2026-10-18T00-00-00Z
-version=20261018000000.0.0
+tag=RELEASE.2026-10-25T00-00-00Z
+version=20261025000000.0.0
 archive="kes_${version}_linux_amd64.tar.gz"
 base="https://github.com/pgsty/kes/releases/download/${tag}"
 curl -fLO "${base}/${archive}"

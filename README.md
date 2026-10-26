@@ -24,17 +24,13 @@
 > [!IMPORTANT]
 > **PGSTY KES** is an independent, community-maintained fork of the open-source [MinIO KES](https://github.com/minio/kes), maintained in [`pgsty/kes`](https://github.com/pgsty/kes) for the SILO ecosystem. It is not affiliated with, endorsed by, or sponsored by MinIO, Inc. References to MinIO identify the upstream project, its authors or compatibility identifiers.
 
-## Next release: 20261025000000 (in preparation)
+## Release 20261025000000
 
-The next maintenance release is being prepared as `RELEASE.2026-10-25T00-00-00Z`, with package version `20261025000000.0.0`. It builds with Go 1.27.3 and updates AWS Secrets Manager, Google Secret Manager, Google API, certificate handling and metrics dependencies. It also refreshes the UBI 9.8 container trust store and uses ZIP archives on Windows. The KES API, configuration and stored key formats remain compatible.
+**[20261025000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-25T00-00-00Z)** uses Git tag `RELEASE.2026-10-25T00-00-00Z` and package version `20261025000000.0.0`. It builds with Go 1.27.3 and updates 25 Go dependency modules, including AWS Secrets Manager, Google Secret Manager, Google API, certificate handling and metrics dependencies. Windows archives now use ZIP. The KES API, configuration and stored key formats remain compatible.
 
-This candidate is not published. The release gate covers upgrades from PGSTY KES 20261018 and AWS SDK v1, including rollback and cold encrypted-object reads with SILO 20261018, 20260916 and 20260903. See [RELEASING.md](RELEASING.md) for the required checks and separate artifact/image publication steps.
+Upgrade and rollback coverage includes OpenBao KV v2 and the Moto Secrets Manager emulator with SILO 20261018, 20260916 and 20260903. Each version transition restarts SILO to check encrypted-object reads without cached keys. Moto and protocol fixtures do not certify live cloud accounts. Go vulnerability scans find no affected imported package; GO-2026-5932 remains an upstream module-level advisory for unused OpenPGP packages.
 
-## Current release
-
-**[20261018000000](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z)** is the first PGSTY KES release. The Git and container tag is `RELEASE.2026-10-18T00-00-00Z`; the package version is `20261018000000.0.0`, following SILO and mcli.
-
-This release builds with Go 1.27.2, updates dependencies, migrates AWS Secrets Manager to AWS SDK for Go v2, and preserves the KES API, configuration and stored keys. Upgrade and rollback tests cover SILO with OpenBao KV v2 and the Moto Secrets Manager emulator. See the [release notes](https://github.com/pgsty/kes/releases/tag/RELEASE.2026-10-18T00-00-00Z) for changes and validation scope.
+See the shared [English maintenance notes](https://silo.pgsty.com/blog/release/silo-20261025/) and [中文维护公告](https://silo.pgsty.com/zh/blog/release/silo-20261025/), the [SILO–KES–OpenBao design](https://silo.pgsty.com/blog/design/kes-openbao/), and [RELEASING.md](RELEASING.md). KES is independently released and deployed; it is optional and is not embedded in SILO Server. Docker Hub publication is a separate step; the container examples below retain the published 20261018 image.
 
 <a id="what-is-kes"></a>
 
@@ -102,8 +98,8 @@ Download a versioned artifact from [GitHub Releases](https://github.com/pgsty/ke
 For example, download and verify the Linux amd64 archive:
 
 ```bash
-tag=RELEASE.2026-10-18T00-00-00Z
-version=20261018000000.0.0
+tag=RELEASE.2026-10-25T00-00-00Z
+version=20261025000000.0.0
 archive="kes_${version}_linux_amd64.tar.gz"
 base="https://github.com/pgsty/kes/releases/download/${tag}"
 curl -fLO "${base}/${archive}"
