@@ -30,7 +30,7 @@
 
 Upgrade and rollback coverage includes OpenBao KV v2 and the Moto Secrets Manager emulator with SILO 20261018, 20260916 and 20260903. Each version transition restarts SILO to check encrypted-object reads without cached keys. Moto and protocol fixtures do not certify live cloud accounts. Go vulnerability scans find no affected imported package; GO-2026-5932 remains an upstream module-level advisory for unused OpenPGP packages.
 
-See the shared [English maintenance notes](https://silo.pgsty.com/blog/release/silo-20261025/) and [中文维护公告](https://silo.pgsty.com/zh/blog/release/silo-20261025/), the [SILO–KES–OpenBao design](https://silo.pgsty.com/blog/design/kes-openbao/), and [RELEASING.md](RELEASING.md). KES is independently released and deployed; it is optional and is not embedded in SILO Server. Docker Hub publication is a separate step; the container examples below retain the published 20261018 image.
+See the shared [English maintenance notes](https://silo.pgsty.com/blog/release/silo-20261025/) and [中文维护公告](https://silo.pgsty.com/zh/blog/release/silo-20261025/), the [SILO–KES–OpenBao design](https://silo.pgsty.com/blog/design/kes-openbao/), and [RELEASING.md](RELEASING.md). KES is independently released and deployed; it is optional and is not embedded in SILO Server. Docker Hub publishes the same release for `linux/amd64` and `linux/arm64`; `RELEASE.2026-10-25T00-00-00Z` and `latest` point to the verified multi-architecture image.
 
 <a id="what-is-kes"></a>
 
@@ -112,10 +112,10 @@ tar -xzf "${archive}" kes
 For containers, pin the version in deployments:
 
 ```bash
-docker run --rm pgsty/kes:RELEASE.2026-10-18T00-00-00Z --version
+docker run --rm pgsty/kes:RELEASE.2026-10-25T00-00-00Z --version
 docker run -d --name kes -p 7373:7373 \
   -v "$PWD/config:/etc/kes:ro" \
-  pgsty/kes:RELEASE.2026-10-18T00-00-00Z \
+  pgsty/kes:RELEASE.2026-10-25T00-00-00Z \
   server --config /etc/kes/server-config.yaml
 ```
 

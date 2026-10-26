@@ -30,7 +30,7 @@
 
 升级和回退验证覆盖 OpenBao KV v2、Moto Secrets Manager 模拟器，以及 SILO 20261018、20260916、20260903；每次版本切换都重启 SILO，检查不依赖密钥缓存的加密对象读回。Moto 与协议测试不等于真实云账号验收。Go 漏洞扫描未发现受影响的导入包；GO-2026-5932 仍是未导入 OpenPGP 包的上游模块级告警。
 
-另见统一维护公告（[中文](https://silo.pgsty.com/zh/blog/release/silo-20261025/) / [English](https://silo.pgsty.com/blog/release/silo-20261025/)）、[SILO—KES—OpenBao 设计](https://silo.pgsty.com/zh/blog/design/kes-openbao/)及 [RELEASING.md](RELEASING.md)。KES 按需独立发布和部署，不嵌入 SILO Server。Docker Hub 镜像单独发布，下方容器示例仍使用已发布的 20261018 镜像。
+另见统一维护公告（[中文](https://silo.pgsty.com/zh/blog/release/silo-20261025/) / [English](https://silo.pgsty.com/blog/release/silo-20261025/)）、[SILO—KES—OpenBao 设计](https://silo.pgsty.com/zh/blog/design/kes-openbao/)及 [RELEASING.md](RELEASING.md)。KES 按需独立发布和部署，不嵌入 SILO Server。Docker Hub 已发布配套的 `linux/amd64` 与 `linux/arm64` 镜像；`RELEASE.2026-10-25T00-00-00Z` 与 `latest` 指向同一个已验收的多架构镜像。
 
 <a id="overview"></a>
 
@@ -116,10 +116,10 @@ tar -xzf "${archive}" kes
 使用容器部署时，固定版本标签：
 
 ```bash
-docker run --rm pgsty/kes:RELEASE.2026-10-18T00-00-00Z --version
+docker run --rm pgsty/kes:RELEASE.2026-10-25T00-00-00Z --version
 docker run -d --name kes -p 7373:7373 \
   -v "$PWD/config:/etc/kes:ro" \
-  pgsty/kes:RELEASE.2026-10-18T00-00-00Z \
+  pgsty/kes:RELEASE.2026-10-25T00-00-00Z \
   server --config /etc/kes/server-config.yaml
 ```
 
